@@ -333,17 +333,16 @@ def update_params(workload: spec.Workload,
     # Update queue
     queue.push(current_model.parameters())
 
-    # Compute avg, load avg into model
-    if queue.full():
-      avg = queue.get_avg()
-      for p, p_avg in zip(current_model.parameters(), avg):
-        assert p.data.shape == p_avg.shape, "Shape mismatch"
-        p.data = p_avg.clone()
+  # Compute avg, load avg into model
+  if queue.full():
+    avg = queue.get_avg_and_keep_it()
+    for p, p_avg in zip(current_model.parameters(), avg):
+      p.data = p_avg.clone()
 
-      if hyperparameters.wandb_log and wandb.run is not None:
-        wandb.log({
-          'my_step': global_step,
-          'is_avg_step': 1})
+    if hyperparameters.wandb_log and wandb.run is not None:
+      wandb.log({
+        'my_step': global_step,
+        'is_avg_step': 1})
         
   ### check logs before return
   # if wandb.run is not None:
