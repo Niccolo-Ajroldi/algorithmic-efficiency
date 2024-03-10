@@ -321,11 +321,11 @@ def update_params(workload: spec.Workload,
                  loss.item(),
                  grad_norm.item())
 
-  ### log model norm before averaging
-  if wandb.run is not None:
-    wandb.log({
-        'w_step': global_step,
-        'norm_model_PRE_AVG': mynorm(current_model.parameters())})
+  # ### log model norm before averaging
+  # if wandb.run is not None:
+  #   wandb.log({
+  #       'w_step': global_step,
+  #       'norm_model_PRE_AVG': mynorm(current_model.parameters())})
     
   if global_step >= lawa_start_step and \
       (global_step-lawa_start_step) % lawa_interval == 0:
@@ -346,17 +346,17 @@ def update_params(workload: spec.Workload,
           'is_avg_step': 1})
         
   ### check logs before return
-  if wandb.run is not None:
-    if queue.full():
-      wandb.log({
-          'w_step': global_step,
-          'norm_prev': mynorm(queue.get_last()),
-          'norm_avg': mynorm(queue.get_avg()),
-          'norm_returned_model': mynorm(current_model.parameters())})
-    else:
-      wandb.log({
-          'w_step': global_step,
-          'norm_returned_model': mynorm(current_model.parameters())})
+  # if wandb.run is not None:
+  #   if queue.full():
+  #     wandb.log({
+  #         'w_step': global_step,
+  #         'norm_prev': mynorm(queue.get_last()),
+  #         'norm_avg': mynorm(queue.get_avg()),
+  #         'norm_returned_model': mynorm(current_model.parameters())})
+  #   else:
+  #     wandb.log({
+  #         'w_step': global_step,
+  #         'norm_returned_model': mynorm(current_model.parameters())})
         
   return (optimizer_state, current_param_container, new_model_state)
 
