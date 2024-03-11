@@ -37,7 +37,7 @@ def init_optimizer_state(workload: spec.Workload,
   def pytorch_trapezoid(step_hint: int, hyperparameters, optimizer):
     
     # TODO: remove
-    step_hint = 100
+    step_hint = 1000
     
     warmup_steps = int(hyperparameters.warmup_factor * step_hint)
     decay_start_step = int(hyperparameters.decay_factor * step_hint)
@@ -111,7 +111,7 @@ def update_params(workload: spec.Workload,
   if wandb.run is not None:
     wandb.log({
         'lr': optimizer_state['scheduler'].get_last_lr()[0], 
-        'lr_step': global_step,
+        'my_step': global_step,
         })
 
 
