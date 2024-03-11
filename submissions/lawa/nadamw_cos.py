@@ -326,7 +326,7 @@ def update_params(workload: spec.Workload,
   #   wandb.log({
   #       'w_step': global_step,
   #       'norm_model_PRE_AVG': mynorm(current_model.parameters())})
-    
+  
   if global_step >= lawa_start_step and \
       (global_step-lawa_start_step) % lawa_interval == 0:
     
