@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#SBATCH --job-name=trapez_05
-#SBATCH --array=1-60
+#SBATCH --job-name=trapez_06
+#SBATCH --array=1-15
 #SBATCH --error=/ptmp/najroldi/logs/algoperf/err/%x_%A_%a.err
 #SBATCH --output=/ptmp/najroldi/logs/algoperf/out/%x_%A_%a.out
 #SBATCH --time=04:00:00
@@ -26,10 +26,10 @@ workload=fastmri
 
 # Submission
 submission='submissions/nadamw_trapez/nadamw_trapez.py'
-search_space='exp/slurm/trapez/space_5.json'
+search_space='exp/slurm/trapez/space_6.json'
 
 # Experiment name, study
-base_name="nadamw_trapez_05"
+base_name="nadamw_trapez_06"
 study=1
 
 # Set config
