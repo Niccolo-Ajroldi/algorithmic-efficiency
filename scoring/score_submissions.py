@@ -47,6 +47,7 @@ def get_summary_df(workload, workload_df):
   summary_df['target metric name'] = validation_metric
   summary_df['target metric value'] = validation_target
 
+  # (nico): scores are misleading!
   # summary_df['target reached'] = workload_df[validation_metric].apply(
   #     lambda x: target_op(x, validation_target)).apply(np.any)
   # summary_df['best target'] = workload_df[validation_metric].apply(
@@ -64,10 +65,19 @@ def get_summary_df(workload, workload_df):
       lambda x: target_op(x, validation_target))
   workload_df['index target reached'] = target_reached_step_indicator.apply(
        lambda x: np.argmax(x))
-  summary_df['submission time'] = workload_df.apply(
+  summary_df['submission_time_at_target'] = workload_df.apply(
       lambda x: x['accumulated_submission_time'][x['index target reached']], axis=1)
   summary_df['score'] = summary_df.apply(
-      lambda x: x['submission time'] if x['target reached'] else np.inf, axis=1)
+      lambda x: x['submission_time_at_target'] if x['target reached'] else np.inf, axis=1)
+  summary_df['step_at_target'] = workload_df.apply(
+      lambda x: x['global_step'][x['index target reached']], axis=1)
+  # step to target
+  summary_df['step_at_target'] = summary_df.apply(
+      lambda x: x['step_at_target'] if x['target reached'] else np.nan, axis=1)
+  summary_df.drop('submission_time_at_target', axis=1, inplace=True)
+  # submission time
+  summary_df['submission time'] = workload_df.apply(
+      lambda x: x['accumulated_submission_time'][-1], axis=1)
   
   return summary_df
 
@@ -81,7 +91,7 @@ def print_submission_summary(df):
   df = pd.concat(dfs)
   logging.info('\n' + tabulate(df, headers='keys', tablefmt='psql'))
 
-# nico: save scores to csv
+# (nico): save scores to csv
 def save_submission_summary(df, submission, output_dir):
   dfs = []
   for workload, group in df.groupby('workload'):
