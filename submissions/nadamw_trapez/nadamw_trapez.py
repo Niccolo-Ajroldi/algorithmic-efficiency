@@ -225,10 +225,16 @@ def init_optimizer_state(workload: spec.Workload,
     linear_decay = LinearLR(
         optimizer, start_factor=1., end_factor=0., total_iters=decay_steps)
     
-    return SequentialLR(
-        optimizer,
-        schedulers=[warmup, constant, linear_decay],
-        milestones=[warmup_steps, decay_start_step])
+    if warmup_steps>0:
+      return SequentialLR(
+          optimizer,
+          schedulers=[warmup, constant, linear_decay],
+          milestones=[warmup_steps, decay_start_step])
+    else:
+      return SequentialLR(
+          optimizer,
+          schedulers=[constant, linear_decay],
+          milestones=[decay_start_step])
 
   optimizer_state['scheduler'] = pytorch_trapezoid(
    workload.step_hint, hyperparameters, optimizer_state['optimizer'])
@@ -295,8 +301,8 @@ def update_params(workload: spec.Workload,
   
   if wandb.run is not None:
     wandb.log({
-        'lr': optimizer_state['scheduler'].get_last_lr()[0]
-        })
+        'my_step': global_step,
+        'lr': optimizer_state['scheduler'].get_last_lr()[0]})
 
   # Log training metrics - loss, grad_norm, batch_size.
   if global_step <= 100 or global_step % 500 == 0:

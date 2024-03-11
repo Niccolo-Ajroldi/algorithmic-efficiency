@@ -36,7 +36,8 @@ def init_optimizer_state(workload: spec.Workload,
 
   def pytorch_trapezoid(step_hint: int, hyperparameters, optimizer):
     
-    step_hint = 1000
+    # TODO: remove
+    step_hint = 100
     
     warmup_steps = int(hyperparameters.warmup_factor * step_hint)
     decay_start_step = int(hyperparameters.decay_factor * step_hint)
@@ -50,10 +51,16 @@ def init_optimizer_state(workload: spec.Workload,
     linear_decay = LinearLR(
         optimizer, start_factor=1., end_factor=0., total_iters=decay_steps)
     
-    return SequentialLR(
-        optimizer,
-        schedulers=[warmup, constant, linear_decay],
-        milestones=[warmup_steps, decay_start_step])
+    if warmup_steps>0:
+      return SequentialLR(
+          optimizer,
+          schedulers=[warmup, constant, linear_decay],
+          milestones=[warmup_steps, decay_start_step])
+    else:
+      return SequentialLR(
+          optimizer,
+          schedulers=[constant, linear_decay],
+          milestones=[decay_start_step])
 
   optimizer_state['scheduler'] = pytorch_trapezoid(
     workload.step_hint, hyperparameters, optimizer_state['optimizer'])
