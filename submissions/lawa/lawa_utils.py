@@ -6,6 +6,7 @@ class LAWAQueue:
   def __init__(self, maxlen) -> None:
     self._maxlen = int(maxlen)
     self._queue = deque(maxlen=self._maxlen)
+    self._q_avg = None
   
   def state_dict(self):
     return {key: value for key, value in self.__dict__.items()}
@@ -34,3 +35,21 @@ class LAWAQueue:
         p_avg.add_(p/k)
     
     return q_avg
+  
+  
+  def get_avg_and_keep_it(self):
+    if not self.full():
+      raise ValueError("q should be full to compute avg")
+    
+    if self._q_avg is not None:  
+      return self._q_avg
+
+    q = self._queue
+    k = float(self._maxlen)
+    q_avg = [torch.zeros_like(p, device=p.device) for p in q[0]]
+    for chkpts in q:
+      for p_avg,p in zip(q_avg, chkpts):
+        p_avg.add_(p/k)          
+    self._q_avg = q_avg
+
+    return self._q_avg

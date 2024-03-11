@@ -47,17 +47,28 @@ def get_summary_df(workload, workload_df):
   summary_df['target metric name'] = validation_metric
   summary_df['target metric value'] = validation_target
 
+  # summary_df['target reached'] = workload_df[validation_metric].apply(
+  #     lambda x: target_op(x, validation_target)).apply(np.any)
+  # summary_df['best target'] = workload_df[validation_metric].apply(
+  #     lambda x: best_op(x))
+  # workload_df['index best eval'] = workload_df[validation_metric].apply(
+  #     lambda x: idx_op(x))
+  # summary_df['submission time'] = workload_df.apply(
+  #     lambda x: x['accumulated_submission_time'][x['index best eval']], axis=1)
+  # summary_df['score'] = summary_df.apply(
+  #     lambda x: x['submission time'] if x['target reached'] else np.inf, axis=1)
+
   summary_df['target reached'] = workload_df[validation_metric].apply(
       lambda x: target_op(x, validation_target)).apply(np.any)
-  summary_df['best target'] = workload_df[validation_metric].apply(
-      lambda x: best_op(x))
-  workload_df['index best eval'] = workload_df[validation_metric].apply(
-      lambda x: idx_op(x))
+  target_reached_step_indicator = workload_df[validation_metric].apply(
+      lambda x: target_op(x, validation_target))
+  workload_df['index target reached'] = target_reached_step_indicator.apply(
+       lambda x: np.argmax(x))
   summary_df['submission time'] = workload_df.apply(
-      lambda x: x['accumulated_submission_time'][x['index best eval']], axis=1)
+      lambda x: x['accumulated_submission_time'][x['index target reached']], axis=1)
   summary_df['score'] = summary_df.apply(
       lambda x: x['submission time'] if x['target reached'] else np.inf, axis=1)
-
+  
   return summary_df
 
 
