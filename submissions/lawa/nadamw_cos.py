@@ -337,6 +337,7 @@ def update_params(workload: spec.Workload,
   if queue.full():
     avg = queue.get_avg_and_keep_it()
     for p, p_avg in zip(current_model.parameters(), avg):
+      assert p.data.shape == p_avg.shape, "Shape mismatch"
       p.data = p_avg.clone()
 
     if hyperparameters.wandb_log and wandb.run is not None:
