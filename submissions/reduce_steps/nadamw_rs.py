@@ -1,5 +1,6 @@
 """Submission file for an NAdamW optimizer with warmup+cosine LR in PyTorch."""
 
+import sys
 import math
 from typing import Dict, Iterator, List, Tuple
 
@@ -14,14 +15,8 @@ from torch.optim.lr_scheduler import SequentialLR
 from algorithmic_efficiency import spec
 from algorithmic_efficiency.pytorch_utils import pytorch_setup
 
-from .lawa_utils import LAWAQueue
-
-import wandb
-def mynorm(params):
-  return torch.norm(torch.stack([torch.norm(p.detach().clone(), 2) for p in params]), 2)
-
-
 USE_PYTORCH_DDP = pytorch_setup()[0]
+
 
 # Modified from github.com/pytorch/pytorch/blob/v1.12.1/torch/optim/adamw.py.
 class NAdamW(torch.optim.Optimizer):
@@ -213,7 +208,6 @@ def init_optimizer_state(workload: spec.Workload,
                      hyperparameters.beta2),
               eps=1e-8,
               weight_decay=hyperparameters.weight_decay),
-      'queue': LAWAQueue(maxlen=hyperparameters.k),
   }
 
   def pytorch_cosine_warmup(step_hint: int, hyperparameters, optimizer):
@@ -225,8 +219,10 @@ def init_optimizer_state(workload: spec.Workload,
     return SequentialLR(
         optimizer, schedulers=[warmup, cosine_decay], milestones=[warmup_steps])
 
+  # reduce number of steps
+  reduced_steps = math.ceil(workload.step_hint * hyperparameters.reduced_steps_factor)
   optimizer_state['scheduler'] = pytorch_cosine_warmup(
-      workload.step_hint, hyperparameters, optimizer_state['optimizer'])
+      reduced_steps, hyperparameters, optimizer_state['optimizer'])
 
   return optimizer_state
 
@@ -247,23 +243,12 @@ def update_params(workload: spec.Workload,
   del loss_type
   del eval_results
 
+  # exit if step> steps:
+  reduced_steps = math.ceil(workload.step_hint * hyperparameters.reduced_steps_factor)
+  if global_step > reduced_steps:
+    sys.exit(0)
+  
   current_model = current_param_container
-  queue = optimizer_state['queue']
-  lawa_start_step = math.ceil(workload.step_hint * hyperparameters.lawa_start_factor)
-  lawa_interval = hyperparameters.lawa_interval
-  
-  # Discard average and load previous params
-  if global_step > lawa_start_step and \
-      (global_step-1-lawa_start_step) % lawa_interval == 0 and \
-        queue.full():
-    for p,p_old in zip(current_model.parameters(), queue.get_last()):
-      p.data = p_old.clone()
-  
-  # Discard average and load previous params
-  if global_step > lawa_start_step and queue.full():
-    for p,p_old in zip(current_model.parameters(), queue.get_last()):
-      p.data = p_old.clone()
-      
   current_model.train()
   optimizer_state['optimizer'].zero_grad()
 
@@ -303,7 +288,7 @@ def update_params(workload: spec.Workload,
         current_model.parameters(), max_norm=grad_clip)
   optimizer_state['optimizer'].step()
   optimizer_state['scheduler'].step()
-  
+
   # Log training metrics - loss, grad_norm, batch_size.
   if global_step <= 100 or global_step % 500 == 0:
     with torch.no_grad():
@@ -321,43 +306,6 @@ def update_params(workload: spec.Workload,
                  loss.item(),
                  grad_norm.item())
 
-  # ### log model norm before averaging
-  # if wandb.run is not None:
-  #   wandb.log({
-  #       'w_step': global_step,
-  #       'norm_model_PRE_AVG': mynorm(current_model.parameters())})
-  
-  if global_step >= lawa_start_step and \
-      (global_step-lawa_start_step) % lawa_interval == 0:
-    
-    # Update queue
-    queue.push(current_model.parameters())
-
-  # Compute avg, load avg into model
-  if queue.full():
-    avg = queue.get_avg_and_keep_it()
-    for p, p_avg in zip(current_model.parameters(), avg):
-      assert p.data.shape == p_avg.shape, "LAWA Shape mismatch"
-      p.data = p_avg.clone()
-
-    if hyperparameters.wandb_log and wandb.run is not None:
-      wandb.log({
-        'my_step': global_step,
-        'is_avg_step': 1})
-        
-  ### check logs before return
-  # if wandb.run is not None:
-  #   if queue.full():
-  #     wandb.log({
-  #         'w_step': global_step,
-  #         'norm_prev': mynorm(queue.get_last()),
-  #         'norm_avg': mynorm(queue.get_avg()),
-  #         'norm_returned_model': mynorm(current_model.parameters())})
-  #   else:
-  #     wandb.log({
-  #         'w_step': global_step,
-  #         'norm_returned_model': mynorm(current_model.parameters())})
-        
   return (optimizer_state, current_param_container, new_model_state)
 
 

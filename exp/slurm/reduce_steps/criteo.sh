@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#SBATCH --job-name=trapez_06
-#SBATCH --array=1-15
+#SBATCH --job-name=criteo1tb_rs
+#SBATCH --array=1-20
 #SBATCH --error=/ptmp/najroldi/logs/algoperf/err/%x_%A_%a.err
 #SBATCH --output=/ptmp/najroldi/logs/algoperf/out/%x_%A_%a.out
 #SBATCH --time=04:00:00
@@ -21,22 +21,22 @@ export EXP_DIR=/ptmp/najroldi/exp/algoperf
 export DATA_DIR=/ptmp/najroldi/data
 
 # Workload
-dataset=fastmri
-workload=fastmri
+dataset=criteo1tb
+workload=criteo1tb
 
 # Submission
-submission='submissions/nadamw_trapez/nadamw_trapez.py'
-search_space='exp/slurm/trapez/space_6.json'
+submission='submissions/reduce_steps/nadamw_rs.py'
+search_space='exp/slurm/reduce_steps/space_1.json'
 
 # Experiment name, study
-base_name="nadamw_trapez_06"
+base_name="nadamw_rs_1"
 study=1
 
 # Set config
 experiment_name="${base_name}/study_${study}"
 num_tuning_trials=$SLURM_ARRAY_TASK_MAX
 trial_index=$SLURM_ARRAY_TASK_ID
-rng_seed=1166838470 #$study # same seed across trials
+rng_seed=3429199924 #$study # same seed across trials
 
 # Execute python script
 torchrun \
@@ -59,5 +59,4 @@ torchrun \
   --experiment_name=$experiment_name \
   --save_intermediate_checkpoints=False \
   --resume_last_run \
-  --use_wandb \
-  --fixed_space
+  --use_wandb

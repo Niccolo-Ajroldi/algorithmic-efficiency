@@ -9,10 +9,10 @@
       "feasible_points": [0.9]
   },
   "warmup_factor": {
-      "feasible_points": [0.0]
+      "feasible_points": [0.1]
   },
   "decay_factor": {
-      "feasible_points": [0.5]
+      "feasible_points": [0.7]
   },
   "weight_decay": {
       "feasible_points": [0.08121616522670176]
