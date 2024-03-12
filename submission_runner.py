@@ -412,6 +412,7 @@ def train_once(
               train_state['test_goal_reached'])
           # nico: FIX + I don't care about test target
           goals_reached = train_state['validation_goal_reached']
+          # (nico): add logging
           if goals_reached and wandb.run is not None:
             wandb.log({"target_reached": 1})
 
@@ -479,6 +480,7 @@ def train_once(
 
   metrics = {'eval_results': eval_results, 'global_step': global_step}
   
+  # (nico): add logging
   if not goals_reached and wandb.run is not None:
     wandb.log({"target_reached": 1,})
             
