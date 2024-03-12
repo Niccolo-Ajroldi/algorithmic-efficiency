@@ -1,0 +1,35 @@
+{
+  "label_smoothing": {
+      "feasible_points": [0.0]
+  },
+  "dropout_rate": {
+      "feasible_points": [0.0]
+  },
+  "learning_rate": {
+    "feasible_points": [0.004958460849689891]
+  },
+  "one_minus_beta1": {
+      "feasible_points": [0.13625575743]
+  },
+  "beta2": {
+      "feasible_points": [0.6291854735396584]
+  },
+  "warmup_factor": {
+    "feasible_points": [0.02]
+  },
+  "weight_decay": {
+      "feasible_points": [0.1147386261512052]
+  },
+  "lawa_start_factor": {
+      "feasible_points": [0.0, 0.5]
+  },
+  "lawa_interval": {
+      "feasible_points": [1, 10, 20, 50, 100, 200, 500, 1000]
+  },
+  "k": {
+      "feasible_points": [5, 10, 15, 20]
+  },
+  "wandb_log": {
+      "feasible_points": [1]
+  }
+}

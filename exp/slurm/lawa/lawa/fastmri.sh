@@ -1,10 +1,10 @@
 #!/bin/bash
 
-#SBATCH --job-name=lawa_04
+#SBATCH --job-name=lawa_06
 #SBATCH --array=1-2
 #SBATCH --error=/ptmp/najroldi/logs/algoperf/err/%x_%A_%a.err
 #SBATCH --output=/ptmp/najroldi/logs/algoperf/out/%x_%A_%a.out
-#SBATCH --time=12:00:00
+#SBATCH --time=04:00:00
 #SBATCH --ntasks 1
 #SBATCH --requeue
 # --- 4 GPUs on a full node ---
@@ -25,11 +25,11 @@ dataset=fastmri
 workload=fastmri
 
 # Submission
-submission='submissions/lawa/nadamw_cos.py'
-search_space='exp/slurm/lawa/lawa/space_4.json'
+submission='submissions/lawa/lawa.py'
+search_space='exp/slurm/lawa/lawa/space_6.json'
 
 # Experiment name, study
-base_name="lawa_04"
+base_name="lawa_06"
 study=1
 
 # Set config
