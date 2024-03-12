@@ -21,8 +21,8 @@ condor_submit_bid 25 exp/condor/ema_init/fastmri.sub
 # echo "librispeech_deepspeech"
 # condor_submit_bid 25 exp/condor/ema_init/librispeech_deepspeech.sub
 
-echo "ogbg"
-condor_submit_bid 25 exp/condor/ema_init/ogbg_arry.sub
+# echo "ogbg"
+# condor_submit_bid 25 exp/condor/ema_init/ogbg_arry.sub
 
 # echo "wmt"
 # condor_submit_bid 25 exp/condor/ema_init/wmt.sub

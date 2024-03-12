@@ -4,7 +4,7 @@ source ~/miniconda3/etc/profile.d/conda.sh
 conda activate alpe
 
 # Env vars
-export OMP_NUM_THREADS=48
+export OMP_NUM_THREADS=12
 export HOME=/home/najroldi
 export CODE_DIR=/home/najroldi/algorithmic-efficiency
 export EXP_DIR=/fast/najroldi/exp/algoperf
@@ -37,11 +37,12 @@ if [ "$dataset" = "librispeech" ]; then
 fi
 
 # Execute python script
-torchrun \
-  --redirects 1:0,2:0,3:0 \
-  --standalone \
-  --nnodes=1 \
-  --nproc_per_node=4 \
+# torchrun \
+#   --redirects 1:0,2:0,3:0 \
+#   --standalone \
+#   --nnodes=1 \
+#   --nproc_per_node=4 \
+python3 \
   $CODE_DIR/submission_runner.py \
   --workload=$workload \
   --framework=pytorch \
