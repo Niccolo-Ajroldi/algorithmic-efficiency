@@ -299,11 +299,6 @@ def update_params(workload: spec.Workload,
   optimizer_state['optimizer'].step()
   optimizer_state['scheduler'].step()
   
-  # if wandb.run is not None:
-  #   wandb.log({
-  #       'my_step': global_step,
-  #       'lr': optimizer_state['scheduler'].get_last_lr()[0]})
-
   # Log training metrics - loss, grad_norm, batch_size.
   if global_step <= 100 or global_step % 500 == 0:
     with torch.no_grad():
