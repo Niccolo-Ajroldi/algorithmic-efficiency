@@ -412,6 +412,8 @@ def train_once(
               train_state['test_goal_reached'])
           # nico: FIX + I don't care about test target
           goals_reached = train_state['validation_goal_reached']
+          if goals_reached and wandb.run is not None:
+            wandb.log({"target_reached": 1})
 
           # Save last eval time.
           eval_end_time = get_time()
@@ -476,7 +478,10 @@ def train_once(
     train_state['last_step_end_time'] = get_time()
 
   metrics = {'eval_results': eval_results, 'global_step': global_step}
-
+  
+  if not goals_reached and wandb.run is not None:
+    wandb.log({"target_reached": 1,})
+            
   if log_dir is not None:
     metrics_logger.append_scalar_metrics(
         {'score': train_state['accumulated_submission_time']},
