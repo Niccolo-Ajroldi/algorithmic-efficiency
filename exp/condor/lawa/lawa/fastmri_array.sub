@@ -1,0 +1,41 @@
+# Define variables
+LOGS_DIR=/fast/najroldi/logs/algoperf
+EXE=/home/najroldi/algorithmic-efficiency/exp/condor/lawa/lawa/auto_run_array.sh
+
+# Job specific vars
++JobName=lawa_04
+dataset=fastmri
+workload=fastmri
+submission=submissions/lawa/nadamw_cos.py
+search_space=exp/condor/lawa/lawa/space_4.json
+exp_name=lawa_04
+study=1
+num_tuning_trials=2
+rng_seed=1166838470
+
+# Args
+executable = $(EXE)
+arguments = \
+  $(dataset) \
+  $(workload) \
+  $(submission) \
+  $(search_space) \
+  $(exp_name) \
+  $(study) \
+  $(num_tuning_trials) \
+  $(Process) \
+  $(rng_seed)
+
+# Logs
+error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
+output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
+log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
+
+# Specs: 4xA100, 40GB of VRAM each
+request_memory = 500000
+request_cpus = 48
+request_gpus = 4
+requirements = (TARGET.CUDACapability == 8.0) && (CUDAGlobalMemoryMb >= 40000) && (CUDAGlobalMemoryMb < 79000)
+
+# Submit parallel jobs
+queue $(num_tuning_trials)
