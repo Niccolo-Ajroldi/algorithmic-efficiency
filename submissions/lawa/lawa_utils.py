@@ -45,12 +45,13 @@ class LAWAQueue:
     if not self.full():
       raise Exception("q should be full to compute avg")
 
+    q = self._queue
+    k = float(self._maxlen)
+    
     # reset avg
     self._q_avg = [torch.zeros_like(p, device=p.device) for p in q[0]]
     
     # update avg
-    q = self._queue
-    k = float(self._maxlen)
     for chkpts in q:
       for p_avg,p in zip(self._q_avg, chkpts):
         p_avg.add_(p/k)

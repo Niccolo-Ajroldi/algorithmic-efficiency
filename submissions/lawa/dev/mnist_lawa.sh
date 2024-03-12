@@ -3,15 +3,15 @@
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate alpe
 
-export CUDA_VISIBLE_DEVICES=7
+export CUDA_VISIBLE_DEVICES=6
 
 # Workload
 dataset=MNIST
 workload=mnist
 
 # Job specific vars
-submission='submissions/lawa/dev/adamw_mnist.py'
-name="mnist_lawa"
+submission='submissions/lawa/dev/mnist_lawa.py'
+name="mnist_lawa_2_fixed"
 
 search_space='submissions/lawa/dev/space_1.json'
 trials=1

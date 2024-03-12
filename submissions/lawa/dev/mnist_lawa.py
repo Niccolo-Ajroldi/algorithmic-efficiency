@@ -9,7 +9,7 @@ import wandb
 
 from algorithmic_efficiency import spec
 
-from .lawa_utils import LAWAQueue
+from .lawa_utils import LAWAQueue, ListOfParams
 
 def mynorm(params):
   return torch.norm(torch.stack([torch.norm(p.detach().clone(), 2) for p in params]), 2)
@@ -19,13 +19,14 @@ def get_batch_size(workload_name):
   batch_sizes = {'mnist': 1024}
   return batch_sizes[workload_name]
 
+
 def init_optimizer_state(workload: spec.Workload,
                          model_params: spec.ParameterContainer,
                          model_state: spec.ModelAuxiliaryState,
                          hyperparameters: spec.Hyperparameters,
                          rng: spec.RandomState) -> spec.OptimizerState:
   del model_state
-  # del workload
+  del workload
   del rng
   optimizer_state = {
       'optimizer':
@@ -35,6 +36,7 @@ def init_optimizer_state(workload: spec.Workload,
               betas=(1.0 - hyperparameters.one_minus_beta_1, 0.999),
               eps=hyperparameters.epsilon),
         'queue': LAWAQueue(maxlen=hyperparameters.k),
+        'prev_model': ListOfParams(model_params.parameters()),
   }
   return optimizer_state
 
@@ -56,17 +58,29 @@ def update_params(workload: spec.Workload,
   del eval_results
   
   current_model = current_param_container
+  prev_model = optimizer_state['prev_model']
   queue = optimizer_state['queue']
   lawa_start_step = hyperparameters.lawa_start_step
   lawa_interval = hyperparameters.lawa_interval
   
+  ### log model norm before loading
+  if wandb.run is not None:
+    wandb.log({
+        'w_step': global_step,
+        'norm_1_at_start': mynorm(current_model.parameters())})
+    
   # Discard average and load previous params
-  if global_step > lawa_start_step and \
-      (global_step-1-lawa_start_step) % lawa_interval == 0 and \
-        queue.full():
-    for p,p_old in zip(current_model.parameters(), queue.get_last()):
+  # REMOVE that check on % lawa_interval == 0
+  if global_step > lawa_start_step and queue.full():
+    for p,p_old in zip(current_model.parameters(), prev_model.parameters()):
       p.data = p_old.clone()
   
+  ### log model norm after loading
+  if wandb.run is not None:
+    wandb.log({
+        'w_step': global_step,
+        'norm_2_after_loading': mynorm(current_model.parameters())})
+    
   current_model.train()
   for param in current_model.parameters():
     param.grad = None
@@ -85,12 +99,19 @@ def update_params(workload: spec.Workload,
   loss.backward()
   optimizer_state['optimizer'].step()
   
+  # Save previous parameters
+  # (this is redundant if c==1, just use queue[-1] in that case)
+  # (or also if we return the avg only when a queue update occurs)
+  if global_step >= lawa_start_step:
+    prev_model.update(current_model.parameters())
+  
   ### log model norm before averaging
   if wandb.run is not None:
     wandb.log({
         'w_step': global_step,
-        'norm_model_PRE_AVG': mynorm(current_model.parameters())})
+        'norm_3_PRE_AVG': mynorm(current_model.parameters())})
 
+  # Update queue and avg
   if global_step >= lawa_start_step and \
       (global_step-lawa_start_step) % lawa_interval == 0:
         
@@ -111,19 +132,21 @@ def update_params(workload: spec.Workload,
     for p, p_avg in zip(current_model.parameters(), avg):
       assert p.data.shape == p_avg.shape, "LAWA Shape mismatch"
       p.data = p_avg.clone()
-        
+
   ### check logs before return
   if wandb.run is not None:
     if queue.full():
       wandb.log({
           'w_step': global_step,
-          'norm_prev': mynorm(queue.get_last()),
-          'norm_avg': mynorm(queue.get_avg()),
-          'norm_returned_model': mynorm(current_model.parameters())})
+          'norm_4_returned_model': mynorm(current_model.parameters()),
+          'norm_5_avg': mynorm(queue.get_avg()),
+          'norm_6_prev': mynorm(queue.get_last()),
+          })
     else:
       wandb.log({
           'w_step': global_step,
-          'norm_returned_model': mynorm(current_model.parameters())})
+          'norm_4_returned_model': mynorm(current_model.parameters())
+          })
         
   return (optimizer_state, current_param_container, new_model_state)
 
