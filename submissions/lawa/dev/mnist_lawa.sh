@@ -12,7 +12,7 @@ workload=mnist
 
 # Job specific vars
 submission='submissions/lawa/dev/adamw_mnist.py'
-name="lawa_dev_seed"
+name="lawa_k_1"
 
 # submission='reference_algorithms/development_algorithms/mnist/mnist_pytorch/submission.py'
 # name="mnist_dev_seed"

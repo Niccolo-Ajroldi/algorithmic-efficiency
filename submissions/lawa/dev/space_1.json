@@ -9,13 +9,13 @@
       "feasible_points": [1e-8]
   },
   "lawa_start_step": {
-      "feasible_points": [100]
+      "feasible_points": [0]
   },
   "lawa_interval": {
-      "feasible_points": [25]
+      "feasible_points": [1]
   },
   "k": {
-      "feasible_points": [4]
+      "feasible_points": [1]
   },
   "wandb_log": {
       "feasible_points": [1]

@@ -107,12 +107,12 @@ def update_params(workload: spec.Workload,
   optimizer_state['optimizer'].step()
   optimizer_state['scheduler'].step()
 
-  import wandb
-  if wandb.run is not None:
-    wandb.log({
-        'lr': optimizer_state['scheduler'].get_last_lr()[0], 
-        'my_step': global_step,
-        })
+  # import wandb
+  # if wandb.run is not None:
+  #   wandb.log({
+  #       'lr': optimizer_state['scheduler'].get_last_lr()[0], 
+  #       'my_step': global_step,
+  #       })
 
 
   return (optimizer_state, current_param_container, new_model_state)

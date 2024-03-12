@@ -378,6 +378,13 @@ def train_once(
         else 3 * workload.max_allowed_runtime_sec)
     train_state['is_time_remaining'] = (
         train_state['accumulated_submission_time'] < max_allowed_runtime_sec)
+    
+    # (nico) log lr
+    if wandb.run is not None:
+      wandb.log({
+          'my_step': global_step,
+          'lr': optimizer_state['scheduler'].get_last_lr()[0]})
+      
     # Check if submission is eligible for an untimed eval.
     if ((train_step_end_time - train_state['last_eval_time'])
         >= workload.eval_period_time_sec or train_state['training_complete']):
@@ -412,6 +419,9 @@ def train_once(
               train_state['test_goal_reached'])
           # nico: FIX + I don't care about test target
           goals_reached = train_state['validation_goal_reached']
+          # (nico): add logging
+          if goals_reached and wandb.run is not None:
+            wandb.log({"target_reached": 1})
 
           # Save last eval time.
           eval_end_time = get_time()
@@ -476,7 +486,11 @@ def train_once(
     train_state['last_step_end_time'] = get_time()
 
   metrics = {'eval_results': eval_results, 'global_step': global_step}
-
+  
+  # (nico): add logging
+  if not goals_reached and wandb.run is not None:
+    wandb.log({"target_reached": 1,})
+            
   if log_dir is not None:
     metrics_logger.append_scalar_metrics(
         {'score': train_state['accumulated_submission_time']},
