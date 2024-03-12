@@ -380,7 +380,7 @@ def train_once(
         train_state['accumulated_submission_time'] < max_allowed_runtime_sec)
     
     # (nico) log lr
-    if wandb.run is not None:
+    if wandb.run is not None and 'scheduler' in optimizer_state:
       wandb.log({
           'my_step': global_step,
           'lr': optimizer_state['scheduler'].get_last_lr()[0]})
