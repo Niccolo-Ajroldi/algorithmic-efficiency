@@ -9,6 +9,8 @@ import wandb
 
 from algorithmic_efficiency import spec
 
+from .lawa_utils import LAWAQueue
+
 def mynorm(params):
   return torch.norm(torch.stack([torch.norm(p.detach().clone(), 2) for p in params]), 2)
       
@@ -16,39 +18,6 @@ def get_batch_size(workload_name):
   # Return the global batch size.
   batch_sizes = {'mnist': 1024}
   return batch_sizes[workload_name]
-
-class LAWAQueue:
-  def __init__(self, maxlen) -> None:
-    self._maxlen = int(maxlen)
-    self._queue = deque(maxlen=self._maxlen)
-  
-  def state_dict(self):
-    return {key: value for key, value in self.__dict__.items()}
-  
-  def load_state_dict(self, state_dict):
-    self.__dict__.update(state_dict)
-    
-  def push(self, params):
-    self._queue.append([p.detach().clone(memory_format=torch.preserve_format) for p in params])
-  
-  def get_last(self):
-    return self._queue[-1]
-  
-  def full(self):
-    return (len(self._queue)==self._maxlen)
-
-  def get_avg(self):
-    if not self.full():
-      raise ValueError("q should be full to compute avg")
-    
-    q = self._queue
-    k = float(self._maxlen)
-    q_avg = [torch.zeros_like(p, device=p.device) for p in q[0]]
-    for chkpts in q:
-      for p_avg,p in zip(q_avg, chkpts):
-        p_avg.add_(p/k)
-    
-    return q_avg
 
 def init_optimizer_state(workload: spec.Workload,
                          model_params: spec.ParameterContainer,
@@ -128,17 +97,20 @@ def update_params(workload: spec.Workload,
     # Update queue
     queue.push(current_model.parameters())
 
-    # Compute avg, load avg into model
+    # Update avg
     if queue.full():
-      avg = queue.get_avg()
-      for p, p_avg in zip(current_model.parameters(), avg):
-        assert p.data.shape == p_avg.shape, "Shape mismatch"
-        p.data = p_avg.clone()
-      
-      if hyperparameters.wandb_log and wandb.run is not None:
-        wandb.log({
-          'my_step': global_step,
-          'is_avg_step': 1})
+      queue.update_avg()
+
+    ### Log
+    if hyperparameters.wandb_log and wandb.run is not None:
+      wandb.log({'my_step': global_step, 'is_avg_step': 1})
+  
+  # Load avg into model
+  if queue.full():
+    avg = queue.get_avg()
+    for p, p_avg in zip(current_model.parameters(), avg):
+      assert p.data.shape == p_avg.shape, "LAWA Shape mismatch"
+      p.data = p_avg.clone()
         
   ### check logs before return
   if wandb.run is not None:

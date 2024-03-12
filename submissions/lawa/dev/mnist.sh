@@ -10,8 +10,8 @@ dataset=MNIST
 workload=mnist
 
 # Job specific vars
-submission='submissions/lawa/dev/adamw_mnist.py'
-name="mnist_lawa"
+submission='reference_algorithms/development_algorithms/mnist/mnist_pytorch/submission.py'
+name="mnist_no_lawa"
 
 search_space='submissions/lawa/dev/space_1.json'
 trials=1

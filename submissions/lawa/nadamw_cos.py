@@ -17,6 +17,7 @@ from algorithmic_efficiency.pytorch_utils import pytorch_setup
 from .lawa_utils import LAWAQueue
 
 import wandb
+
 def mynorm(params):
   return torch.norm(torch.stack([torch.norm(p.detach().clone(), 2) for p in params]), 2)
 
@@ -259,11 +260,6 @@ def update_params(workload: spec.Workload,
     for p,p_old in zip(current_model.parameters(), queue.get_last()):
       p.data = p_old.clone()
   
-  # Discard average and load previous params
-  if global_step > lawa_start_step and queue.full():
-    for p,p_old in zip(current_model.parameters(), queue.get_last()):
-      p.data = p_old.clone()
-      
   current_model.train()
   optimizer_state['optimizer'].zero_grad()
 
@@ -321,42 +317,46 @@ def update_params(workload: spec.Workload,
                  loss.item(),
                  grad_norm.item())
 
-  # ### log model norm before averaging
-  # if wandb.run is not None:
-  #   wandb.log({
-  #       'w_step': global_step,
-  #       'norm_model_PRE_AVG': mynorm(current_model.parameters())})
+  ### log model norm before averaging
+  if wandb.run is not None:
+    wandb.log({
+        'w_step': global_step,
+        'norm_model_PRE_AVG': mynorm(current_model.parameters())})
   
   if global_step >= lawa_start_step and \
       (global_step-lawa_start_step) % lawa_interval == 0:
     
     # Update queue
     queue.push(current_model.parameters())
+    
+    # Update avg
+    if queue.full():
+      queue.update_avg()
+    
+    ### Log
+    if hyperparameters.wandb_log and wandb.run is not None:
+      wandb.log({'my_step': global_step, 'is_avg_step': 1})
 
-  # Compute avg, load avg into model
+  # Load avg into model
   if queue.full():
-    avg = queue.get_avg_and_keep_it()
+    avg = queue.get_avg()
     for p, p_avg in zip(current_model.parameters(), avg):
       assert p.data.shape == p_avg.shape, "LAWA Shape mismatch"
       p.data = p_avg.clone()
 
-    if hyperparameters.wandb_log and wandb.run is not None:
-      wandb.log({
-        'my_step': global_step,
-        'is_avg_step': 1})
         
   ### check logs before return
-  # if wandb.run is not None:
-  #   if queue.full():
-  #     wandb.log({
-  #         'w_step': global_step,
-  #         'norm_prev': mynorm(queue.get_last()),
-  #         'norm_avg': mynorm(queue.get_avg()),
-  #         'norm_returned_model': mynorm(current_model.parameters())})
-  #   else:
-  #     wandb.log({
-  #         'w_step': global_step,
-  #         'norm_returned_model': mynorm(current_model.parameters())})
+  if wandb.run is not None:
+    if queue.full():
+      wandb.log({
+          'w_step': global_step,
+          'norm_prev': mynorm(queue.get_last()),
+          'norm_avg': mynorm(queue.get_avg()),
+          'norm_returned_model': mynorm(current_model.parameters())})
+    else:
+      wandb.log({
+          'w_step': global_step,
+          'norm_returned_model': mynorm(current_model.parameters())})
         
   return (optimizer_state, current_param_container, new_model_state)
 
