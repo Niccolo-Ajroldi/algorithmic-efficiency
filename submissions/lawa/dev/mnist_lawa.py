@@ -70,7 +70,7 @@ def update_params(workload: spec.Workload,
         'norm_1_at_start': mynorm(current_model.parameters())})
     
   # Discard average and load previous params
-  # REMOVE that check on % lawa_interval == 0
+  # REMOVED that check on % lawa_interval == 0
   if global_step > lawa_start_step and queue.full():
     for p,p_old in zip(current_model.parameters(), prev_model.parameters()):
       p.data = p_old.clone()
@@ -114,14 +114,11 @@ def update_params(workload: spec.Workload,
   # Update queue and avg
   if global_step >= lawa_start_step and \
       (global_step-lawa_start_step) % lawa_interval == 0:
-        
     # Update queue
     queue.push(current_model.parameters())
-
     # Update avg
     if queue.full():
       queue.update_avg()
-
     ### Log
     if hyperparameters.wandb_log and wandb.run is not None:
       wandb.log({'my_step': global_step, 'is_avg_step': 1})
@@ -140,7 +137,6 @@ def update_params(workload: spec.Workload,
           'w_step': global_step,
           'norm_4_returned_model': mynorm(current_model.parameters()),
           'norm_5_avg': mynorm(queue.get_avg()),
-          'norm_6_prev': mynorm(queue.get_last()),
           })
     else:
       wandb.log({

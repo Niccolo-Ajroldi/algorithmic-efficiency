@@ -75,7 +75,7 @@ def update_params(workload: spec.Workload,
   if wandb.run is not None:
     wandb.log({
         'w_step': global_step,
-        'norm_returned_model': mynorm(current_model.parameters())})
+        'norm_4_returned_model': mynorm(current_model.parameters())})
   
   return (optimizer_state, current_param_container, new_model_state)
 

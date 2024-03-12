@@ -3,6 +3,8 @@
 import math
 from typing import Dict, Iterator, List, Tuple
 
+import wandb
+
 from absl import logging
 import torch
 from torch import Tensor
@@ -14,15 +16,11 @@ from torch.optim.lr_scheduler import SequentialLR
 from algorithmic_efficiency import spec
 from algorithmic_efficiency.pytorch_utils import pytorch_setup
 
-from .lawa_utils import LAWAQueue, ListOfParams
-
-import wandb
-
 def mynorm(params):
   return torch.norm(torch.stack([torch.norm(p.detach().clone(), 2) for p in params]), 2)
 
-
 USE_PYTORCH_DDP = pytorch_setup()[0]
+
 
 # Modified from github.com/pytorch/pytorch/blob/v1.12.1/torch/optim/adamw.py.
 class NAdamW(torch.optim.Optimizer):
@@ -214,8 +212,6 @@ def init_optimizer_state(workload: spec.Workload,
                      hyperparameters.beta2),
               eps=1e-8,
               weight_decay=hyperparameters.weight_decay),
-      'queue': LAWAQueue(maxlen=hyperparameters.k),
-      'prev_model': ListOfParams(model_params.parameters()),
   }
 
   def pytorch_cosine_warmup(step_hint: int, hyperparameters, optimizer):
@@ -250,16 +246,6 @@ def update_params(workload: spec.Workload,
   del eval_results
 
   current_model = current_param_container
-  prev_model = optimizer_state['prev_model']
-  queue = optimizer_state['queue']
-  lawa_start_step = math.ceil(workload.step_hint * hyperparameters.lawa_start_factor)
-  lawa_interval = hyperparameters.lawa_interval
-  
-  # Discard average and load previous params
-  if global_step > lawa_start_step and queue.full():
-    for p,p_old in zip(current_model.parameters(), prev_model.parameters()):
-      p.data = p_old.clone()
-  
   current_model.train()
   optimizer_state['optimizer'].zero_grad()
 
@@ -299,7 +285,7 @@ def update_params(workload: spec.Workload,
         current_model.parameters(), max_norm=grad_clip)
   optimizer_state['optimizer'].step()
   optimizer_state['scheduler'].step()
-  
+
   # Log training metrics - loss, grad_norm, batch_size.
   if global_step <= 100 or global_step % 500 == 0:
     with torch.no_grad():
@@ -317,29 +303,12 @@ def update_params(workload: spec.Workload,
                  loss.item(),
                  grad_norm.item())
 
-  # Save previous parameters
-  if global_step >= lawa_start_step:
-    prev_model.update(current_model.parameters())
+  # (nico): log model norm
+  if wandb.run is not None:
+    wandb.log({
+        'w_step': global_step,
+        'norm_4_returned_model': mynorm(current_model.parameters())})
   
-  # Update queue and avg
-  if global_step >= lawa_start_step and \
-      (global_step-lawa_start_step) % lawa_interval == 0:
-    # Update queue
-    queue.push(current_model.parameters())
-    # Update avg
-    if queue.full():
-      queue.update_avg()
-    ### Log
-    if wandb.run is not None:
-      wandb.log({'my_step': global_step, 'is_avg_step': 1})
-  
-  # Load avg into model
-  if queue.full():
-    avg = queue.get_avg()
-    for p, p_avg in zip(current_model.parameters(), avg):
-      assert p.data.shape == p_avg.shape, "LAWA Shape mismatch"
-      p.data = p_avg.clone()
-
   return (optimizer_state, current_param_container, new_model_state)
 
 

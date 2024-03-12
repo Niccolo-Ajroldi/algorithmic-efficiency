@@ -39,19 +39,6 @@ class LAWAQueue:
   
   def full(self):
     return (len(self._queue)==self._maxlen)
-
-  # def get_avg(self):
-  #   if not self.full():
-  #     raise ValueError("q should be full to compute avg")
-    
-  #   q = self._queue
-  #   k = float(self._maxlen)
-  #   q_avg = [torch.zeros_like(p, device=p.device) for p in q[0]]
-  #   for chkpts in q:
-  #     for p_avg,p in zip(q_avg, chkpts):
-  #       p_avg.add_(p/k)
-    
-  #   return q_avg
   
   def get_avg(self):
     if not self.full():
@@ -73,3 +60,13 @@ class LAWAQueue:
       for p_avg,p in zip(self._q_avg, chkpts):
         p_avg.add_(p/k)
     
+  # def get_avg(self):
+  #   if not self.full():
+  #     raise ValueError("q should be full to compute avg")
+  #   q = self._queue
+  #   k = float(self._maxlen)
+  #   q_avg = [torch.zeros_like(p, device=p.device) for p in q[0]]
+  #   for chkpts in q:
+  #     for p_avg,p in zip(q_avg, chkpts):
+  #       p_avg.add_(p/k)
+  #   return q_avg

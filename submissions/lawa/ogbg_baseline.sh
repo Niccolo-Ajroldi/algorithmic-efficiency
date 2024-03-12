@@ -1,19 +1,22 @@
 #!/bin/bash
 
-source ~/miniconda3/etc/profile.d/conda.sh
+source ~/.bashrc
 conda activate alpe
 
 export CUDA_VISIBLE_DEVICES=6
 
+export CODE_DIR=~/algorithmic-efficiency
+export EXP_DIR=/is/sg2/najroldi/exp/algoperf
+export DATA_DIR=/is/sg2/najroldi/data
+
 # Workload
-dataset=MNIST
-workload=mnist
+dataset=ogbg
+workload=ogbg
 
 # Job specific vars
-submission='submissions/lawa/dev/mnist_lawa.py'
-name="mnist_lawa_2_reload"
-
-search_space='submissions/lawa/dev/space_1.json'
+submission='submissions/lawa/nadamw_baseline.py'
+search_space='submissions/lawa/space_1.json'
+name="lawa_baseline_2"
 trials=1
 
 # Execute python script
@@ -29,10 +32,7 @@ python \
   --num_tuning_trials=$trials \
   --experiment_dir=$EXP_DIR  \
   --experiment_name=$name \
-  --save_intermediate_checkpoints=True \
-  --resume_last_run=True \
-  --fixed_space \
+  --save_intermediate_checkpoints=False \
+  --overwrite \
   --rng_seed=1996 \
   --use_wandb
-
-# --overwrite \

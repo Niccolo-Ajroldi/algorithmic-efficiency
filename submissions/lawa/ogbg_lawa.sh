@@ -4,7 +4,6 @@ source ~/.bashrc
 conda activate alpe
 
 export CUDA_VISIBLE_DEVICES=0
-# export CUDA_VISIBLE_DEVICES=0
 
 export CODE_DIR=~/algorithmic-efficiency
 export EXP_DIR=/is/sg2/najroldi/exp/algoperf
@@ -17,15 +16,10 @@ workload=ogbg
 # Job specific vars
 submission='submissions/lawa/nadamw_cos.py'
 search_space='submissions/lawa/space_1.json'
-name="lawa_ogbg_01"
+name="lawa_lawa_2"
 trials=1
 
 # Execute python script
-# torchrun \
-#   --redirects 1:0,2:0,3:0 \
-#   --standalone \
-#   --nnodes=1 \
-#   --nproc_per_node=4 \
 python \
   $CODE_DIR/submission_runner.py \
   --workload=$workload \
@@ -38,6 +32,7 @@ python \
   --num_tuning_trials=$trials \
   --experiment_dir=$EXP_DIR  \
   --experiment_name=$name \
+  --save_intermediate_checkpoints=False \
   --overwrite \
   --rng_seed=1996 \
   --use_wandb
