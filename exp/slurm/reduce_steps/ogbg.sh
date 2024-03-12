@@ -4,7 +4,7 @@
 #SBATCH --array=1-20
 #SBATCH --error=/ptmp/najroldi/logs/algoperf/err/%x_%A_%a.err
 #SBATCH --output=/ptmp/najroldi/logs/algoperf/out/%x_%A_%a.out
-#SBATCH --time=04:00:00
+#SBATCH --time=06:00:00
 #SBATCH --ntasks 1
 #SBATCH --requeue
 # --- 4 GPUs on a full node ---
@@ -29,7 +29,7 @@ submission='submissions/reduce_steps/nadamw_rs.py'
 search_space='exp/slurm/reduce_steps/space_1.json'
 
 # Experiment name, study
-base_name="nadamw_rs_1"
+base_name="nadamw_rs_2"
 study=1
 
 # Set config

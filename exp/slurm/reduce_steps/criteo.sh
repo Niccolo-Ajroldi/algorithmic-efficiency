@@ -29,7 +29,7 @@ submission='submissions/reduce_steps/nadamw_rs.py'
 search_space='exp/slurm/reduce_steps/space_1.json'
 
 # Experiment name, study
-base_name="nadamw_rs_1"
+base_name="nadamw_rs_2"
 study=1
 
 # Set config
