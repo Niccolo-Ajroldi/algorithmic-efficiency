@@ -4,6 +4,8 @@ import sys
 import math
 from typing import Dict, Iterator, List, Tuple
 
+import wandb
+
 from absl import logging
 import torch
 from torch import Tensor
@@ -243,9 +245,11 @@ def update_params(workload: spec.Workload,
   del loss_type
   del eval_results
 
-  # exit if step> steps:
+  # exit if step > reduced_steps:
   reduced_steps = math.ceil(workload.step_hint * hyperparameters.reduced_steps_factor)
   if global_step > reduced_steps:
+    if wandb.run is not None:
+      wandb.log({"reached_reduced_steps": 1})
     sys.exit(0)
   
   current_model = current_param_container
