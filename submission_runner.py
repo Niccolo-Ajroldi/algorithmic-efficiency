@@ -332,9 +332,11 @@ def train_once(
   goals_reached = (
       train_state['validation_goal_reached'] and
       train_state['test_goal_reached'])
+  reached_step_hint = False
   while train_state['is_time_remaining'] and \
       not goals_reached and \
-      not train_state['training_complete']:
+      not train_state['training_complete'] and\
+      not reached_step_hint:
 
     step_rng = prng.fold_in(rng, global_step)
     data_select_rng, update_rng, eval_rng = prng.split(step_rng, 3)
@@ -380,7 +382,7 @@ def train_once(
         train_state['accumulated_submission_time'] < max_allowed_runtime_sec)
     
     # (nico) log lr
-    if wandb.run is not None and 'scheduler' in optimizer_state:
+    if wandb.run is not None and 'scheduler' in optimizer_state and (global_step % 100 == 0):
       wandb.log({
           'my_step': global_step,
           'lr': optimizer_state['scheduler'].get_last_lr()[0]})
@@ -395,11 +397,10 @@ def train_once(
         try:
           eval_start_time = get_time()
           # nico
-          if wandb.run is not None:
+          if wandb.run is not None and (global_step % 100 == 0):
             wandb.log({
               'my_step': global_step,
-              'is_eval_step': 1,
-              'is_eval_step_2': 2})
+              'is_eval_step': 1})
           latest_eval_result = workload.eval_model(global_eval_batch_size,
                                                    model_params,
                                                    model_state,
@@ -422,6 +423,11 @@ def train_once(
           # (nico): add logging
           if goals_reached and wandb.run is not None:
             wandb.log({"target_reached": 1})
+          # nico: allow results to be reproducible on different machines
+          reached_step_hint = (global_step > workload.step_hint)
+          # (nico): add logging
+          if reached_step_hint and wandb.run is not None:
+            wandb.log({"reached_step_hint": 1})
 
           # Save last eval time.
           eval_end_time = get_time()
@@ -490,6 +496,8 @@ def train_once(
   # (nico): add logging
   if not goals_reached and wandb.run is not None:
     wandb.log({"target_reached": 0,})
+  if not reached_step_hint and wandb.run is not None:
+    wandb.log({"reached_step_hint": 0,})
             
   if log_dir is not None:
     metrics_logger.append_scalar_metrics(
