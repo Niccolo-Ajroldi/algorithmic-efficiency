@@ -489,7 +489,7 @@ def train_once(
   
   # (nico): add logging
   if not goals_reached and wandb.run is not None:
-    wandb.log({"target_reached": 1,})
+    wandb.log({"target_reached": 0,})
             
   if log_dir is not None:
     metrics_logger.append_scalar_metrics(
