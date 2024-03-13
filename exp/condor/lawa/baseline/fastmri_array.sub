@@ -3,12 +3,12 @@ LOGS_DIR=/fast/najroldi/logs/algoperf
 EXE=/home/najroldi/algorithmic-efficiency/exp/condor/lawa/baseline/auto_run.sh
 
 # Job specific vars
-+JobName=lawa_07_baseline
++JobName=lawa_08_baseline
 dataset=fastmri
 workload=fastmri
 submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
 search_space=exp/condor/lawa/baseline/space_7.json
-exp_name=lawa_07_baseline
+exp_name=lawa_08_baseline
 study=1
 num_tuning_trials=1
 rng_seed=1166838470
