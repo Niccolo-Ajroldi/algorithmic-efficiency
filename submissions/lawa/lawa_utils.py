@@ -34,8 +34,8 @@ class LAWAQueue:
   def push(self, params):
     self._queue.append([p.detach().clone(memory_format=torch.preserve_format) for p in params])
   
-  def get_last(self):
-    return self._queue[-1]
+  # def get_last(self):
+  #   return self._queue[-1]
   
   def full(self):
     return (len(self._queue)==self._maxlen)
@@ -53,7 +53,7 @@ class LAWAQueue:
     k = float(self._maxlen)
     
     # reset avg
-    self._q_avg = [torch.zeros_like(p, device=p.device) for p in q[0]]
+    self._q_avg = [torch.zeros_like(p, device=p.device, memory_format=torch.preserve_format) for p in q[0]]
     
     # update avg
     for chkpts in q:
