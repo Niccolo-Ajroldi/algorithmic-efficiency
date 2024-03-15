@@ -27,7 +27,7 @@
       "feasible_points": [1]
   },
   "k": {
-      "feasible_points": [1,2]
+      "feasible_points": [1]
   },
   "wandb_log": {
       "feasible_points": [1]
