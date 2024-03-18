@@ -19,13 +19,8 @@ name=$5
 study=$6
 num_tuning_trials=$7
 
-# $8 should be $(Process)
-# CONDOR job arrays range from 0 to n-1, so we add +1 here
-# $((...)) is for arithmetic substitution in .sh
-trial_index=$(($8 + 1))
-
 # Same seed across trials
-rng_seed=$9 # OCIO!! modified for fastmri and criteo
+rng_seed=$8 # OCIO!
 
 # Experiment name
 experiment_name="${name}/study_${study}"
@@ -36,7 +31,12 @@ if [ "$dataset" = "librispeech" ]; then
     tokenizer_path="${DATA_DIR}/librispeech/spm_model.vocab"
 fi
 
-# Execute python scripts
+# Execute python script
+# torchrun \
+#   --redirects 1:0,2:0,3:0 \
+#   --standalone \
+#   --nnodes=1 \
+#   --nproc_per_node=4 \
 python3 \
   $CODE_DIR/submission_runner.py \
   --workload=$workload \
@@ -48,11 +48,11 @@ python3 \
   --submission_path=$submission \
   --tuning_search_space=$search_space \
   --num_tuning_trials=$num_tuning_trials \
-  --trial_index=$trial_index \
   --rng_seed=$rng_seed \
   --experiment_dir=$EXP_DIR  \
   --experiment_name=$experiment_name \
   --save_intermediate_checkpoints=False \
   --resume_last_run \
-  --use_wandb \
-  --fixed_space # OCIO! modified
+  --use_wandb
+# --fixed_space # OCIO!
+# --trial_index=$trial_index # OCIO!

@@ -3,7 +3,7 @@
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate alpe
 
-export CUDA_VISIBLE_DEVICES=6
+export CUDA_VISIBLE_DEVICES=5
 
 # Workload
 dataset=MNIST
@@ -11,7 +11,7 @@ workload=mnist
 
 # Job specific vars
 submission='submissions/lawa/dev/mnist_lawa.py'
-name="mnist_lawa_2_reload"
+name="mnist_lawa_new_01"
 
 search_space='submissions/lawa/dev/space_1.json'
 trials=1
@@ -29,10 +29,7 @@ python \
   --num_tuning_trials=$trials \
   --experiment_dir=$EXP_DIR  \
   --experiment_name=$name \
-  --save_intermediate_checkpoints=True \
-  --resume_last_run=True \
+  --overwrite \
   --fixed_space \
   --rng_seed=1996 \
   --use_wandb
-
-# --overwrite \
