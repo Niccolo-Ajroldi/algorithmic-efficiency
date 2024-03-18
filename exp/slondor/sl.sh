@@ -40,6 +40,12 @@ experiment_name="${base_name}/study_${study}"
 num_tuning_trials=$SLURM_ARRAY_TASK_MAX
 trial_index=$SLURM_ARRAY_TASK_ID
 
+# Librispeech tokenizer path
+tokenizer_path=''
+if [ "$dataset" = "librispeech" ]; then
+    tokenizer_path="${DATA_DIR}/librispeech/spm_model.vocab"
+fi
+
 # Execute python script
 torchrun \
   --redirects 1:0,2:0,3:0 \
@@ -52,6 +58,7 @@ torchrun \
   --tuning_ruleset=external \
   --data_dir=$DATA_DIR/$dataset \
   --imagenet_v2_data_dir=$DATA_DIR/$dataset \
+  --librispeech_tokenizer_vocab_path=$tokenizer_path \
   --submission_path=$submission \
   --tuning_search_space=$search_space \
   --num_tuning_trials=$num_tuning_trials \
