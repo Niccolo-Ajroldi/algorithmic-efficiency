@@ -11,7 +11,7 @@ workload=mnist
 
 # Job specific vars
 submission='submissions/lawa/dev/mnist_baseline.py'
-name="mnist_no_lawa_1"
+name="mnist_no_lawa_new_09"
 
 search_space='submissions/lawa/dev/space_1.json'
 trials=1
