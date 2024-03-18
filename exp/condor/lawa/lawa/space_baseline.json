@@ -19,17 +19,5 @@
   },
   "weight_decay": {
       "feasible_points": [0.1147386261512052]
-  },
-  "lawa_start_factor": {
-      "feasible_points": [0.0]
-  },
-  "lawa_interval": {
-      "feasible_points": [10, 20, 50]
-  },
-  "k": {
-      "feasible_points": [5, 10, 15, 20]
-  },
-  "wandb_log": {
-      "feasible_points": [1]
   }
 }
