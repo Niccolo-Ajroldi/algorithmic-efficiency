@@ -8,9 +8,9 @@
 #SBATCH --ntasks 1
 #SBATCH --requeue
 # --- 4 GPUs on a full node ---
-#SBATCH --gres=gpu:a100:4
-#SBATCH --cpus-per-task=48
-#SBATCH --mem=500000
+#SBATCH --gres=gpu:a100:1
+#SBATCH --cpus-per-task=12
+#SBATCH --mem=125000
 
 source ~/.bashrc
 conda activate alpe
@@ -29,7 +29,7 @@ submission='submissions/nadamw_trapez/nadamw_trapez.py'
 search_space='exp/slurm/trapez/space_6.json'
 
 # Experiment name, study
-base_name="nadamw_trapez_06"
+base_name="trapez_11"
 study=1
 
 # Set config
@@ -39,11 +39,7 @@ trial_index=$SLURM_ARRAY_TASK_ID
 rng_seed=1166838470 #$study # same seed across trials
 
 # Execute python script
-torchrun \
-  --redirects 1:0,2:0,3:0 \
-  --standalone \
-  --nnodes=1 \
-  --nproc_per_node=4 \
+python3 \
   $CODE_DIR/submission_runner.py \
   --workload=$workload \
   --framework=pytorch \
