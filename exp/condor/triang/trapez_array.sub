@@ -1,16 +1,16 @@
 # Define variables
 LOGS_DIR=/fast/najroldi/logs/algoperf
-EXE=/home/najroldi/algorithmic-efficiency/exp/condor/lawa/lawa/auto_run.sh
+EXE=/home/najroldi/algorithmic-efficiency/exp/condor/lawa/lawa/auto_run_array.sh
 
 # Job specific vars
-+JobName=lawa_11_k1_10
-dataset=fastmri
-workload=fastmri
-submission=submissions/lawa/lawa.py
-search_space=exp/condor/lawa/lawa/space_k1.json
-exp_name=lawa_11_k1_10
++JobName=trapez_10
+dataset=ogbg
+workload=ogbg
+submission=submissions/nadamw_trapez/nadamw_trapez.py
+search_space=exp/condor/triang/space_trapez.json
+exp_name=trapez_10
 study=1
-num_tuning_trials=1
+num_tuning_trials=60
 rng_seed=1
 
 # Args
@@ -23,6 +23,7 @@ arguments = \
   $(exp_name) \
   $(study) \
   $(num_tuning_trials) \
+  $(Process) \
   $(rng_seed)
 
 # Logs
@@ -31,10 +32,10 @@ output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
 log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 
 # Specs: 1xA100, 40GB of VRAM each
-request_memory = 200000
+request_memory = 125000
 request_cpus = 12
 request_gpus = 1
-requirements = (TARGET.CUDACapability == 8.0) && (CUDAGlobalMemoryMb >= 40000) && (CUDAGlobalMemoryMb < 79000)
+requirements = (TARGET.CUDACapability == 8.0)
 
 # Submit parallel jobs
 queue $(num_tuning_trials)

@@ -1,25 +1,27 @@
 #!/bin/bash
 
+chmod +x exp/condor/lawa/oom/auto_run.sh
+
 echo "criteo"
-condor_submit_bid 25 exp/condor/lawa/criteo.sub
+condor_submit_bid 25 exp/condor/lawa/oom/criteo.sub
 
 echo "fastmri"
-condor_submit_bid 25 exp/condor/lawa/fastmri.sub
+condor_submit_bid 25 exp/condor/lawa/oom/fastmri.sub
 
 echo "imagenet_resnet"
-condor_submit_bid 25 exp/condor/lawa/imagenet_resnet.sub
+condor_submit_bid 25 exp/condor/lawa/oom/imagenet_resnet.sub
 
 echo "imagenet_vit"
-condor_submit_bid 25 exp/condor/lawa/imagenet_vit.sub
+condor_submit_bid 25 exp/condor/lawa/oom/imagenet_vit.sub
 
 echo "librispeech_conformer"
-condor_submit_bid 25 exp/condor/lawa/librispeech_conformer.sub
+condor_submit_bid 25 exp/condor/lawa/oom/librispeech_conformer.sub
 
 echo "librispeech_deepspeech"
-condor_submit_bid 25 exp/condor/lawa/librispeech_deepspeech.sub
+condor_submit_bid 25 exp/condor/lawa/oom/librispeech_deepspeech.sub
 
 echo "ogbg"
-condor_submit_bid 25 exp/condor/lawa/ogbg.sub
+condor_submit_bid 25 exp/condor/lawa/oom/ogbg.sub
 
 echo "wmt"
-condor_submit_bid 25 exp/condor/lawa/wmt.sub
+condor_submit_bid 25 exp/condor/lawa/oom/wmt.sub

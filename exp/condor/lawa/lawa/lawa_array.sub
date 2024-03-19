@@ -1,14 +1,14 @@
 # Define variables
 LOGS_DIR=/fast/najroldi/logs/algoperf
-EXE=/Users/nico/algorithmic-efficiency/exp/condor/lawa/lawa/auto_run_array.sh
+EXE=/home/najroldi/algorithmic-efficiency/exp/condor/lawa/lawa/auto_run_array.sh
 
 # Job specific vars
-+JobName=lawa_10
++JobName=lawa_10_05
 dataset=fastmri
 workload=fastmri
 submission=submissions/lawa/lawa.py
 search_space=exp/condor/lawa/lawa/space_array.json
-exp_name=lawa_10
+exp_name=lawa_10_05
 study=1
 num_tuning_trials=12
 rng_seed=1

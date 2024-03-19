@@ -1,12 +1,12 @@
 #!/bin/bash
 
-#SBATCH --job-name=baseline_20
+#SBATCH --job-name=baseline_21
 #SBATCH --error=/ptmp/najroldi/logs/algoperf/err/%x_%A_%a.err
 #SBATCH --output=/ptmp/najroldi/logs/algoperf/out/%x_%A_%a.out
-#SBATCH --time=24:00:00
+#SBATCH --time=05:00:00
 #SBATCH --ntasks 1
 #SBATCH --requeue
-# --- 1 GPUs on a single node ---
+# --- 4 GPUs on a single node ---
 #SBATCH --gres=gpu:a100:4
 #SBATCH --cpus-per-task=48
 #SBATCH --mem=500000
@@ -15,6 +15,7 @@ source ~/.bashrc
 conda activate alpe
 
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
+export CUDA_VISIBLE_DEVICES=0,1,2,3
 export CODE_DIR=~/algorithmic-efficiency
 export EXP_DIR=/ptmp/najroldi/exp/algoperf
 export DATA_DIR=/ptmp/najroldi/data
@@ -33,7 +34,7 @@ search_space=exp/slurm/lawa/lawa/ogbg/space_baseline_single.json
 
 # Experiment name
 iter=$3
-base_name="baseline_20_${iter}"
+base_name="baseline_21_${iter}"
 
 # Set config
 experiment_name="${base_name}/study_${study}"

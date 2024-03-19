@@ -20,12 +20,12 @@ export EXP_DIR=/ptmp/najroldi/exp/algoperf
 export DATA_DIR=/ptmp/najroldi/data
 
 # Workload
-dataset=fastmri
-workload=fastmri
+dataset=ogbg
+workload=ogbg
 
 # Submission
 submission=submissions/nadamw_trapez/nadamw_trapez.py
-search_space=exp/condor/triang/space_trapez_fastmri.json
+search_space=exp/condor/triang/space_trapez_ogbg.json
 
 # Experiment name, study
 base_name="trapez_11"
