@@ -3,12 +3,12 @@ LOGS_DIR=/fast/najroldi/logs/algoperf
 EXE=/home/najroldi/algorithmic-efficiency/exp/condor/lawa/lawa/auto_run_array.sh
 
 # Job specific vars
-+JobName=triang_10
-dataset=ogbg
-workload=ogbg
++JobName=triang_11
+dataset=fastmri
+workload=fastmri
 submission=submissions/nadamw_triang/nadamw_triang.py
 search_space=exp/condor/triang/space_triang.json
-exp_name=triang_10
+exp_name=triang_11
 study=1
 num_tuning_trials=25
 rng_seed=1
