@@ -18,7 +18,7 @@
       "feasible_points": [1e-2, 3e-3, 1e-3, 3e-4, 1e-4]
     },
     "warmup_factor": {
-        "feasible_points": [0.02, 0.05, 0.25]
+        "feasible_points": [0.02, 0.05]
     },
     "decay_factor": {
         "feasible_points": [0.25, 0.50, 0.75]
