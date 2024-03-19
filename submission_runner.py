@@ -58,9 +58,6 @@ import wandb
 # disable only for deepspeech if it works fine for other workloads.
 os.environ['XLA_FLAGS'] = '--xla_gpu_enable_triton_gemm=false'
 
-# # TODO: REMOVE!!
-# torch.use_deterministic_algorithms(True)
-
 # TODO(znado): make a nicer registry of workloads that lookup in.
 BASE_WORKLOADS_DIR = workloads.BASE_WORKLOADS_DIR
 
@@ -501,6 +498,8 @@ def train_once(
     wandb.log({"target_reached": 0,})
   if not reached_step_hint and wandb.run is not None:
     wandb.log({"reached_step_hint": 0,})
+  if wandb.run is not None:
+    wandb.log({"is_time_remaining": train_state['is_time_remaining'],})
             
   if log_dir is not None:
     metrics_logger.append_scalar_metrics(

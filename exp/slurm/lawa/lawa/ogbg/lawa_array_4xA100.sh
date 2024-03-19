@@ -1,13 +1,13 @@
 #!/bin/bash
 
-#SBATCH --job-name=quali_b_01
-#SBATCH --array=1-5
+#SBATCH --job-name=lawa_21
+#SBATCH --array=1-12
 #SBATCH --error=/ptmp/najroldi/logs/algoperf/err/%x_%A_%a.err
 #SBATCH --output=/ptmp/najroldi/logs/algoperf/out/%x_%A_%a.out
-#SBATCH --time=24:00:00
+#SBATCH --time=05:00:00
 #SBATCH --ntasks 1
 #SBATCH --requeue
-# --- 4 GPUs on a full node ---
+# --- 4 GPUs on a single node ---
 #SBATCH --gres=gpu:a100:4
 #SBATCH --cpus-per-task=48
 #SBATCH --mem=500000
@@ -16,6 +16,7 @@ source ~/.bashrc
 conda activate alpe
 
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
+export CUDA_VISIBLE_DEVICES=0,1,2,3
 export CODE_DIR=~/algorithmic-efficiency
 export EXP_DIR=/ptmp/najroldi/exp/algoperf
 export DATA_DIR=/ptmp/najroldi/data
@@ -23,22 +24,23 @@ export DATA_DIR=/ptmp/najroldi/data
 # Workload
 dataset=$1
 workload=$2
-study=$3
 
 # Same seed across trials
+study=1
 rng_seed=$study
 
 # Submission
-submission='prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py'
-search_space='prize_qualification_baselines/external_tuning/named_space.json'
+submission=submissions/lawa/lawa.py
+search_space=exp/slurm/lawa/lawa/ogbg/space_lawa_array.json
 
 # Experiment name
-base_name="quali_b_01"
+iter=$3
+base_name="lawa_21_${iter}"
 
 # Set config
 experiment_name="${base_name}/study_${study}"
-num_tuning_trials=$SLURM_ARRAY_TASK_MAX
-trial_index=$SLURM_ARRAY_TASK_ID
+num_tuning_trials=${SLURM_ARRAY_TASK_MAX}
+trial_index=${SLURM_ARRAY_TASK_ID}
 
 # Librispeech tokenizer path
 tokenizer_path=''
@@ -68,4 +70,5 @@ torchrun \
   --experiment_name=$experiment_name \
   --save_intermediate_checkpoints=False \
   --resume_last_run \
-  --use_wandb
+  --use_wandb \
+  --fixed_space # OCIO!

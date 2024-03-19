@@ -1,16 +1,15 @@
 #!/bin/bash
 
-#SBATCH --job-name=quali_b_01
-#SBATCH --array=1-5
+#SBATCH --job-name=baseline_20
 #SBATCH --error=/ptmp/najroldi/logs/algoperf/err/%x_%A_%a.err
 #SBATCH --output=/ptmp/najroldi/logs/algoperf/out/%x_%A_%a.out
-#SBATCH --time=24:00:00
+#SBATCH --time=10:00:00
 #SBATCH --ntasks 1
 #SBATCH --requeue
-# --- 4 GPUs on a full node ---
-#SBATCH --gres=gpu:a100:4
-#SBATCH --cpus-per-task=48
-#SBATCH --mem=500000
+# --- 1 GPUs on a single node ---
+#SBATCH --gres=gpu:a100:1
+#SBATCH --cpus-per-task=12
+#SBATCH --mem=125000
 
 source ~/.bashrc
 conda activate alpe
@@ -23,22 +22,22 @@ export DATA_DIR=/ptmp/najroldi/data
 # Workload
 dataset=$1
 workload=$2
-study=$3
 
 # Same seed across trials
+study=1
 rng_seed=$study
 
 # Submission
-submission='prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py'
-search_space='prize_qualification_baselines/external_tuning/named_space.json'
+submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
+search_space=exp/slurm/lawa/lawa/ogbg/space_baseline_single.json
 
 # Experiment name
-base_name="quali_b_01"
+iter=$3
+base_name="baseline_20_${iter}"
 
 # Set config
 experiment_name="${base_name}/study_${study}"
-num_tuning_trials=$SLURM_ARRAY_TASK_MAX
-trial_index=$SLURM_ARRAY_TASK_ID
+num_tuning_trials=1
 
 # Librispeech tokenizer path
 tokenizer_path=''
@@ -47,11 +46,7 @@ if [ "$dataset" = "librispeech" ]; then
 fi
 
 # Execute python script
-torchrun \
-  --redirects 1:0,2:0,3:0 \
-  --standalone \
-  --nnodes=1 \
-  --nproc_per_node=4 \
+python3 \
   $CODE_DIR/submission_runner.py \
   --workload=$workload \
   --framework=pytorch \
@@ -62,7 +57,6 @@ torchrun \
   --submission_path=$submission \
   --tuning_search_space=$search_space \
   --num_tuning_trials=$num_tuning_trials \
-  --trial_index=$trial_index \
   --rng_seed=$rng_seed \
   --experiment_dir=$EXP_DIR  \
   --experiment_name=$experiment_name \
