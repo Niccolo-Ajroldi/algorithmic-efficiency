@@ -1,16 +1,16 @@
 # Define variables
 LOGS_DIR = /fast/najroldi/logs/algoperf
-EXE=/home/najroldi/algorithmic-efficiency/exp/condor/lawa/auto_run.sh
+EXE=/home/najroldi/algorithmic-efficiency/exp/condor/lawa/oom/auto_run.sh
 
 # Job specific vars
 +JobName=librispeech_deepspeech
 dataset=librispeech
 workload=librispeech_deepspeech
-submission=submissions/lawa/nadamw_cos.py
-search_space=exp/condor/lawa/lawa.json
-exp_name=lawa_oom_test
+submission=submissions/lawa_ema/lawa_ema.py
+search_space=exp/condor/lawa/oom/lawa.json
+exp_name=lawa_ema_oom_test
 study=1
-num_tuning_trials=3
+num_tuning_trials=1
 
 # Args
 executable = $(EXE)
@@ -34,4 +34,4 @@ request_cpus = 28
 request_gpus = 8
 requirements = (TARGET.CUDACapability == 7.0) && (CUDAGlobalMemoryMb >= 16000) && (CUDAGlobalMemoryMb < 31000)
 
-queue
+queue $(num_tuning_trials)
