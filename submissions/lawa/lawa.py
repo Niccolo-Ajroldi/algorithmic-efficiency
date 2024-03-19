@@ -340,7 +340,7 @@ def update_params(workload: spec.Workload,
       assert p.data.shape == p_avg.shape, "LAWA Shape mismatch"
       p.data = p_avg.clone()
 
-  return (optimizer_state, current_param_container, new_model_state)
+  return (optimizer_state, current_model, new_model_state)
 
 
 def get_batch_size(workload_name):
