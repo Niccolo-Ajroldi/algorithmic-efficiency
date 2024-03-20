@@ -49,5 +49,5 @@ torchrun \
   --save_intermediate_checkpoints=False \
   --resume_last_run \
   --use_wandb \
-  --max_global_steps=50 \
+  --max_global_steps=20 \
   --rng_seed=1996
