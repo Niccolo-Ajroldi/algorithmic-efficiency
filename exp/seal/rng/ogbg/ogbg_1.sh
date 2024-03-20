@@ -17,7 +17,7 @@ name="long_ogbg_GPU_det_fixeval_01"
 eval_freq=1000
 
 # Execute python script
-# python3 $CODE_DIR/submission_runner.py \
+# python3 $CODE_DIR/submission_runner_fixed_eval.py \
 torchrun \
     --redirects 1:0 \
     --standalone \
