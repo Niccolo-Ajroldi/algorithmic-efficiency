@@ -16,11 +16,6 @@ from algorithmic_efficiency.pytorch_utils import pytorch_setup
 
 from .lawa_ema_utils import LAWAEma, ListOfParams
 
-import wandb
-
-def mynorm(params):
-  return torch.norm(torch.stack([torch.norm(p.detach().clone(), 2) for p in params]), 2)
-
 
 USE_PYTORCH_DDP = pytorch_setup()[0]
 
@@ -325,9 +320,6 @@ def update_params(workload: spec.Workload,
   if global_step >= lawa_start_step and \
       (global_step-lawa_start_step) % lawa_interval == 0:
     lawa_ema.push(current_model.parameters())
-    # Log
-    if wandb.run is not None:
-      wandb.log({'my_step': global_step, 'is_avg_step': 1})
   
   # Load avg into model
   if global_step >= lawa_start_step:

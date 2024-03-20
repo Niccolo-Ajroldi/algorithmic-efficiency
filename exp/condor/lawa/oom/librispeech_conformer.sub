@@ -1,5 +1,5 @@
 # Define variables
-LOGS_DIR = /fast/najroldi/logs/algoperf
+LOGS_DIR=/fast/najroldi/logs/algoperf
 EXE=/home/najroldi/algorithmic-efficiency/exp/condor/lawa/oom/auto_run.sh
 
 # Job specific vars
@@ -29,9 +29,9 @@ output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
 log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 
 # Specs
-request_memory = 500000
-request_cpus = 28
+request_memory = 250000
+request_cpus = 8
 request_gpus = 8
-requirements = (TARGET.CUDACapability == 7.0) && (CUDAGlobalMemoryMb >= 16000) && (CUDAGlobalMemoryMb < 31000)
+requirements = (TARGET.CUDADeviceName == "Tesla V100-PCIE-16GB") && (CUDAGlobalMemoryMb >= 16000)
 
-queue $(num_tuning_trials)
+queue 1
