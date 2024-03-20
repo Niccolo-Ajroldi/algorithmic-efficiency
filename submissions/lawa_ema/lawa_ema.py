@@ -325,9 +325,6 @@ def update_params(workload: spec.Workload,
   if global_step >= lawa_start_step and \
       (global_step-lawa_start_step) % lawa_interval == 0:
     lawa_ema.push(current_model.parameters())
-    # Log
-    if wandb.run is not None:
-      wandb.log({'my_step': global_step, 'is_avg_step': 1})
   
   # Load avg into model
   if global_step >= lawa_start_step:
@@ -335,7 +332,15 @@ def update_params(workload: spec.Workload,
     for p, p_avg in zip(current_model.parameters(), avg):
       assert p.data.shape == p_avg.shape, "LAWA Shape mismatch"
       p.data = p_avg.clone()
-
+  
+  # log returned model
+  if wandb.run is not None and hyperparameters.wandb_log_norm_lawa:
+    wandb.log({
+        'w_step': global_step,
+        'norm_current_model': mynorm(current_model.parameters()),
+        'norm_current_param_container': mynorm(current_param_container.parameters())
+        })
+    
   return (optimizer_state, current_model, new_model_state)
 
 

@@ -4,7 +4,7 @@ source ~/.bashrc
 conda activate alpe
 
 export CUDA_VISIBLE_DEVICES=3,4
-export CUBLAS_WORKSPACE_CONFIG=:4096:8
+# export CUBLAS_WORKSPACE_CONFIG=:4096:8
 export OMP_NUM_THREADS=8
 
 # Job specific vars

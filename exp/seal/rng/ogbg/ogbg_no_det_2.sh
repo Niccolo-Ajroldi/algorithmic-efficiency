@@ -3,8 +3,8 @@
 source ~/.bashrc
 conda activate alpe
 
-export CUDA_VISIBLE_DEVICES=3,4
-export CUBLAS_WORKSPACE_CONFIG=:4096:8
+export CUDA_VISIBLE_DEVICES=5,6
+# export CUBLAS_WORKSPACE_CONFIG=:4096:8
 export OMP_NUM_THREADS=8
 
 # Job specific vars
@@ -13,7 +13,7 @@ dataset=ogbg
 submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
 search_space=exp/seal/rng/ogbg/space.json
 trials=1
-name="long_ogbg_GPU_NOdet_fixeval_01"
+name="long_ogbg_GPU_NOdet_fixeval_02"
 eval_freq=1000
 
 # Execute python script

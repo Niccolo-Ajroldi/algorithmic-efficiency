@@ -11,7 +11,7 @@ dataset=MNIST
 submission=exp/seal/lawa/nadamw/lawa.py
 search_space=exp/seal/lawa/nadamw/space_2.json
 trials=1
-name="lawa_k1_cpu_01"
+name="lawa_real_cpu_05"
 eval_freq=20
 
 # Execute python script

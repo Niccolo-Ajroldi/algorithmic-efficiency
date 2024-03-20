@@ -9,12 +9,14 @@ export CUDA_VISIBLE_DEVICES=''
 workload=mnist
 dataset=MNIST
 submission=exp/seal/lawa/nadamw/pytorch_nadamw_full_budget.py
-search_space=exp/seal/lawa/nadamw/space.json
+search_space=exp/seal/lawa/nadamw/space_2.json
 trials=1
 name="nadamw_cpu_01"
+eval_freq=20
 
 # Execute python script
-python3 $CODE_DIR/submission_runner.py \
+python3 $CODE_DIR/submission_runner_fixed_eval.py \
+    --eval_freq=$eval_freq \
     --workload=$workload \
     --framework=pytorch \
     --tuning_ruleset=external \

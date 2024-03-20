@@ -329,9 +329,9 @@ def update_params(workload: spec.Workload,
     # Update avg
     if queue.full():
       queue.update_avg()
-    ### Log
-    if wandb.run is not None:
-      wandb.log({'my_step': global_step, 'is_avg_step': 1})
+    # # Log
+    # if wandb.run is not None:
+    #   wandb.log({'my_step': global_step, 'is_avg_step': 1})
   
   # Load avg into model
   if queue.full():
@@ -340,6 +340,14 @@ def update_params(workload: spec.Workload,
       assert p.data.shape == p_avg.shape, "LAWA Shape mismatch"
       p.data = p_avg.clone()
 
+  # log returned model
+  if wandb.run is not None:
+    wandb.log({
+        'w_step': global_step,
+        'norm_current_model': mynorm(current_model.parameters()),
+        'norm_current_param_container': mynorm(current_param_container.parameters())
+        })
+  
   return (optimizer_state, current_model, new_model_state)
 
 

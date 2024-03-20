@@ -317,6 +317,13 @@ def update_params(workload: spec.Workload,
                  loss.item(),
                  grad_norm.item())
 
+  # # log returned model
+  # if wandb.run is not None:
+  #   wandb.log({
+  #       'w_step': global_step,
+  #       'norm_after_opt_step': mynorm(current_model.parameters())
+  #       })
+  
   # Save previous parameters
   if global_step >= lawa_start_step:
     prev_model.update(current_model.parameters())
@@ -329,9 +336,9 @@ def update_params(workload: spec.Workload,
     # Update avg
     if queue.full():
       queue.update_avg()
-    ### Log
-    if wandb.run is not None:
-      wandb.log({'my_step': global_step, 'is_avg_step': 1})
+    # ### Log
+    # if wandb.run is not None:
+    #   wandb.log({'my_step': global_step, 'is_avg_step': 1})
   
   # Load avg into model
   if queue.full():

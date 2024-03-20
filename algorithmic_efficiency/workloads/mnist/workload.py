@@ -130,6 +130,7 @@ class BaseMnistWorkload(spec.Workload):
 
   @property
   def max_allowed_runtime_sec(self) -> int:
+    # (nico)
     return 60*10
     # return 60
 
