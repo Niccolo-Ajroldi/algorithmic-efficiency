@@ -27,5 +27,5 @@ python3 $CODE_DIR/submission_runner.py \
     --overwrite \
     --use_wandb \
     --save_checkpoints=False \
-    --max_global_steps 10000 \
+    --max_global_steps 5000 \
     --rng_seed=1996
