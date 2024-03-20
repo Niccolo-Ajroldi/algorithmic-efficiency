@@ -8,10 +8,10 @@ export CUDA_VISIBLE_DEVICES=''
 # Job specific vars
 workload=mnist
 dataset=MNIST
-submission=exp/seal/lawa/nadamw/lawa.py
-search_space=exp/seal/lawa/nadamw/space_2.json
+submission=submissions/lawa_ema/lawa_ema.py
+search_space=exp/seal/lawa/nadamw/space_3.json
 trials=1
-name="lawa_k1_cpu_01"
+name="lawa_ema_real_cpu_02"
 eval_freq=20
 
 # Execute python script

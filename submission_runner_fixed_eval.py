@@ -176,7 +176,10 @@ flags.DEFINE_integer('pytorch_eval_num_workers',
 flags.DEFINE_boolean('torch_deterministic',
                      False,
                      'If true, use_deterministic_algorithms')
-
+# (nico): how often to evaluate
+flags.DEFINE_integer('eval_freq',
+                     None,
+                     'How often to evaluate')
 FLAGS = flags.FLAGS
 USE_PYTORCH_DDP, RANK, DEVICE, N_GPUS = pytorch_setup()
 
@@ -400,8 +403,9 @@ def train_once(
           'lr': optimizer_state['scheduler'].get_last_lr()[0]})
       
     # Check if submission is eligible for an untimed eval.
-    if ((train_step_end_time - train_state['last_eval_time'])
-        >= workload.eval_period_time_sec or train_state['training_complete']):
+    # if ((train_step_end_time - train_state['last_eval_time'])
+    #     >= workload.eval_period_time_sec or train_state['training_complete']):
+    if (global_step % FLAGS.eval_freq == 0) or train_state['training_complete']:
       with profiler.profile('Evaluation'):
         del batch
         _reset_cuda_mem()

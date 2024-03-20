@@ -3,21 +3,20 @@
 source ~/.bashrc
 conda activate alpe
 
-export CUDA_VISIBLE_DEVICES='0'
+export CUDA_VISIBLE_DEVICES=''
 
 # Job specific vars
 workload=mnist
 dataset=MNIST
-submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
-search_space=exp/seal/lawa/nadamw/space_1.json
+submission=exp/seal/lawa/nadamw/pytorch_nadamw_full_budget.py
+search_space=exp/seal/lawa/nadamw/space_2.json
 trials=1
-name="rng_nadamw_01_gpu"
-
-# Print GPU infos
-# nvidia-smi
+name="nadamw_cpu_01"
+eval_freq=20
 
 # Execute python script
-python3 $CODE_DIR/submission_runner.py \
+python3 $CODE_DIR/submission_runner_fixed_eval.py \
+    --eval_freq=$eval_freq \
     --workload=$workload \
     --framework=pytorch \
     --tuning_ruleset=external \
@@ -30,5 +29,5 @@ python3 $CODE_DIR/submission_runner.py \
     --overwrite \
     --use_wandb \
     --save_checkpoints=False \
-    --max_global_steps 1000 \
+    --max_global_steps 5000 \
     --rng_seed=1996

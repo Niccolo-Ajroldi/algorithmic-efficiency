@@ -4,10 +4,10 @@ from collections import deque
 
 class ListOfParams():
   def __init__(self, params) -> None:
-    self._params = [p.detach().clone(memory_format=torch.preserve_format) for p in params]
+    self._params = [p.detach().clone().cpu() for p in params]
 
   def update(self, params):
-    self._params = [p.detach().clone(memory_format=torch.preserve_format) for p in params]
+    self._params = [p.detach().clone().cpu() for p in params]
   
   def parameters(self):
     return self._params
@@ -32,10 +32,7 @@ class LAWAQueue:
     self.__dict__.update(state_dict)
     
   def push(self, params):
-    self._queue.append([p.detach().clone(memory_format=torch.preserve_format) for p in params])
-  
-  # def get_last(self):
-  #   return self._queue[-1]
+    self._queue.append([p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params])
   
   def full(self):
     return (len(self._queue)==self._maxlen)
@@ -53,20 +50,10 @@ class LAWAQueue:
     k = float(self._maxlen)
     
     # reset avg
-    self._q_avg = [torch.zeros_like(p, device=p.device, memory_format=torch.preserve_format) for p in q[0]]
+    self._q_avg = [torch.zeros_like(p, device='cpu', memory_format=torch.preserve_format) for p in q[0]]
     
     # update avg
     for chkpts in q:
       for p_avg,p in zip(self._q_avg, chkpts):
         p_avg.add_(p/k)
-    
-  # def get_avg(self):
-  #   if not self.full():
-  #     raise ValueError("q should be full to compute avg")
-  #   q = self._queue
-  #   k = float(self._maxlen)
-  #   q_avg = [torch.zeros_like(p, device=p.device) for p in q[0]]
-  #   for chkpts in q:
-  #     for p_avg,p in zip(q_avg, chkpts):
-  #       p_avg.add_(p/k)
-  #   return q_avg
+  

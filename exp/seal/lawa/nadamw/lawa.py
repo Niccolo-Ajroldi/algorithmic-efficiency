@@ -19,7 +19,7 @@ from .lawa_utils import LAWAQueue, ListOfParams
 import wandb
 
 def mynorm(params):
-  return torch.norm(torch.stack([torch.norm(p.detach().clone(memory_format=torch.preserve_format), 2) for p in params]), 2)
+  return torch.norm(torch.stack([torch.norm(p.detach().clone(), 2) for p in params]), 2)
 
 
 USE_PYTORCH_DDP = pytorch_setup()[0]
@@ -258,7 +258,7 @@ def update_params(workload: spec.Workload,
   # Discard average and load previous params
   if global_step > lawa_start_step and queue.full():
     for p,p_old in zip(current_model.parameters(), prev_model.parameters()):
-      p.data = p_old.clone(memory_format=torch.preserve_format)
+      p.data = p_old.clone()
   
   current_model.train()
   optimizer_state['optimizer'].zero_grad()
@@ -317,6 +317,13 @@ def update_params(workload: spec.Workload,
                  loss.item(),
                  grad_norm.item())
 
+  # # log returned model
+  # if wandb.run is not None:
+  #   wandb.log({
+  #       'w_step': global_step,
+  #       'norm_after_opt_step': mynorm(current_model.parameters())
+  #       })
+  
   # Save previous parameters
   if global_step >= lawa_start_step:
     prev_model.update(current_model.parameters())
@@ -329,7 +336,7 @@ def update_params(workload: spec.Workload,
     # Update avg
     if queue.full():
       queue.update_avg()
-    # # Log
+    # ### Log
     # if wandb.run is not None:
     #   wandb.log({'my_step': global_step, 'is_avg_step': 1})
   
@@ -338,7 +345,7 @@ def update_params(workload: spec.Workload,
     avg = queue.get_avg()
     for p, p_avg in zip(current_model.parameters(), avg):
       assert p.data.shape == p_avg.shape, "LAWA Shape mismatch"
-      p.data = p_avg.clone(memory_format=torch.preserve_format)
+      p.data = p_avg.clone()
 
   # log returned model
   if wandb.run is not None:
