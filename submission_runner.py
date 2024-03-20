@@ -591,16 +591,20 @@ def score_submission_on_workload(workload: spec.Workload,
   
     with open(tuning_search_space, 'r', encoding='UTF-8') as search_space_file:
       if not FLAGS.fixed_space:
+        # (nico) original code
         tuning_search_space = halton.generate_search(
             json.load(search_space_file), num_tuning_trials)
       else:
+        # (nico) my code for generating trials TODO: check before submission
         tuning_search_space = fixed_space.generate_search(
             json.load(search_space_file), num_tuning_trials)
     
+    # (nico) check for parallel trials
     if trial_index is not None:
       if trial_index < 1 or trial_index > num_tuning_trials:
         raise ValueError('trial_index should be in [1, num_tuning_trials]')
-    # halton.generate_search always produce the same list, but order may vary
+    
+    # (nico) halton.generate_search always produce the same list, but order may vary
     tuning_search_space.sort()
 
     all_timings = []
