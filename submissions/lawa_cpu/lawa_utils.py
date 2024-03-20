@@ -4,10 +4,10 @@ from collections import deque
 
 class ListOfParams():
   def __init__(self, params) -> None:
-    self._params = [p.detach().clone().cpu() for p in params]
+    self._params = [p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params]
 
   def update(self, params):
-    self._params = [p.detach().clone().cpu() for p in params]
+    self._params = [p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params]
   
   def parameters(self):
     return self._params
