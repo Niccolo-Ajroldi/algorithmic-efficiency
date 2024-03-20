@@ -1,0 +1,7 @@
+[
+  {
+    "learning_rate": 1e-1,
+    "one_minus_beta_1": 0.9,
+    "epsilon": 0.999
+  }
+]

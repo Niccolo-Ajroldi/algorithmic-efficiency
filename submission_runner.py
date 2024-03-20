@@ -172,6 +172,11 @@ flags.DEFINE_boolean('set_pytorch_max_split_size',
 flags.DEFINE_integer('pytorch_eval_num_workers',
                      4,
                      'Number of workers for PyTorch evaluation data loaders.')
+# (nico): make deterministic
+flags.DEFINE_boolean('torch_deterministic',
+                     False,
+                     'If true, use_deterministic_algorithms')
+
 FLAGS = flags.FLAGS
 USE_PYTORCH_DDP, RANK, DEVICE, N_GPUS = pytorch_setup()
 
@@ -690,6 +695,11 @@ def score_submission_on_workload(workload: spec.Workload,
 
 
 def main(_):
+  # (nico): make deterministic
+  if FLAGS.torch_deterministic:
+    torch.use_deterministic_algorithms(True)
+    torch.backends.cudnn.benchmark = True
+
   if FLAGS.profile:
     profiler = Profiler()
   else:
