@@ -13,7 +13,8 @@ dataset=ogbg
 submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
 search_space=exp/seal/rng/ogbg/space.json
 trials=1
-name="long_ogbg_GPU_det_01"
+name="long_ogbg_GPU_det_fixeval_01"
+eval_freq=1000
 
 # Execute python script
 # python3 $CODE_DIR/submission_runner.py \
@@ -22,7 +23,8 @@ torchrun \
     --standalone \
     --nnodes=1 \
     --nproc_per_node=2 \
-    $CODE_DIR/submission_runner.py \
+    $CODE_DIR/submission_runner_fixed_eval.py \
+    --eval_freq=$eval_freq \
     --workload=$workload \
     --framework=pytorch \
     --tuning_ruleset=external \
