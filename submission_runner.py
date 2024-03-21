@@ -176,6 +176,10 @@ flags.DEFINE_integer('pytorch_eval_num_workers',
 flags.DEFINE_boolean('torch_deterministic',
                      False,
                      'If true, use_deterministic_algorithms')
+# (nico): log LR
+flags.DEFINE_boolean('extra_wandb_logging',
+                     False,
+                     'Log LR')
 
 FLAGS = flags.FLAGS
 USE_PYTORCH_DDP, RANK, DEVICE, N_GPUS = pytorch_setup()
@@ -344,11 +348,17 @@ def train_once(
   goals_reached = (
       train_state['validation_goal_reached'] and
       train_state['test_goal_reached'])
+  
+  # original:
+  # while train_state['is_time_remaining'] and \
+  #     not goals_reached and \
+  #     not train_state['training_complete']:
+  
+  # (nico): stop when step == step_hint
   reached_step_hint = False
-  while train_state['is_time_remaining'] and \
+  while not reached_step_hint and \
       not goals_reached and \
-      not train_state['training_complete'] and\
-      not reached_step_hint:
+      not train_state['training_complete']:
 
     step_rng = prng.fold_in(rng, global_step)
     data_select_rng, update_rng, eval_rng = prng.split(step_rng, 3)
@@ -394,7 +404,7 @@ def train_once(
         train_state['accumulated_submission_time'] < max_allowed_runtime_sec)
     
     # (nico) log lr
-    if wandb.run is not None and 'scheduler' in optimizer_state and (global_step % 100 == 0):
+    if FLAGS.extra_wandb_logging and wandb.run is not None and 'scheduler' in optimizer_state and (global_step % 100 == 0):
       wandb.log({
           'my_step': global_step,
           'lr': optimizer_state['scheduler'].get_last_lr()[0]})
@@ -430,16 +440,18 @@ def train_once(
           train_state['test_goal_reached'] = (
               workload.has_reached_test_target(latest_eval_result) or
               train_state['test_goal_reached'])
-          # nico: FIX + I don't care about test target
+          
+          # (nico): FIX + I don't care about test target
           goals_reached = train_state['validation_goal_reached']
-          # (nico): add logging
-          if goals_reached and wandb.run is not None:
-            wandb.log({"target_reached": 1})
-          # nico: allow results to be reproducible on different machines
+          
+          # (nico): stop at ma_steps, allow reproducibility across machines
           reached_step_hint = (global_step > workload.step_hint)
-          # (nico): add logging
-          if reached_step_hint and wandb.run is not None:
-            wandb.log({"reached_step_hint": 1})
+          
+          # # (nico): add logging
+          # if goals_reached and wandb.run is not None:
+          #   wandb.log({"target_reached": 1})
+          # if reached_step_hint and wandb.run is not None:
+          #   wandb.log({"reached_step_hint": 1})
 
           # Save last eval time.
           eval_end_time = get_time()
@@ -506,12 +518,11 @@ def train_once(
   metrics = {'eval_results': eval_results, 'global_step': global_step}
   
   # (nico): add logging
-  if not goals_reached and wandb.run is not None:
-    wandb.log({"target_reached": 0,})
-  if not reached_step_hint and wandb.run is not None:
-    wandb.log({"reached_step_hint": 0,})
   if wandb.run is not None:
-    wandb.log({"is_time_remaining": train_state['is_time_remaining'],})
+    wandb.log({
+      "target_reached": goals_reached, 
+      "reached_step_hint": reached_step_hint,
+      "is_time_remaining": train_state['is_time_remaining']})
             
   if log_dir is not None:
     metrics_logger.append_scalar_metrics(

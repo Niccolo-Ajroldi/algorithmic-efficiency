@@ -1,0 +1,41 @@
+# Define variables
+LOGS_DIR=/fast/najroldi/logs/algoperf
+EXE=/home/najroldi/algorithmic-efficiency/exp/unified/baseline/condor/auto_run_array.sh
+
+# Job specific vars
++JobName=wmt
+
+dataset=wmt
+workload=wmt
+submission=exp/unified/baseline/nadamw_full_b_lighter.py
+search_space=exp/unified/baseline/json/trial_2.json
+exp_name=lawa_cpu
+study=1
+num_tuning_trials=5
+rng_seed=1
+
+# Args
+executable = $(EXE)
+arguments = \
+  $(dataset) \
+  $(workload) \
+  $(submission) \
+  $(search_space) \
+  $(exp_name) \
+  $(study) \
+  $(num_tuning_trials) \
+  $(Process) \
+  $(rng_seed)
+
+# Logs
+error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
+output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
+log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
+
+# Specs
+request_memory = 500000
+request_cpus = 16
+request_gpus = 2
+requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB")
+
+queue $(num_tuning_trials)
