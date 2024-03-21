@@ -86,14 +86,16 @@ def get_summary_df(workload, workload_df):
       lambda x: x['accumulated_submission_time'][x['index target reached']], axis=1)
   summary_df['score'] = summary_df.apply(
       lambda x: x['submission_time_at_target'] if x['target reached'] else np.inf, axis=1)
-  # summary_df.drop('submission_time_at_target', axis=1, inplace=True)
+  summary_df.drop('submission_time_at_target', axis=1, inplace=True)
   summary_df['step_at_target'] = workload_df.apply(
       lambda x: x['global_step'][x['index target reached']], axis=1)
   summary_df['step_at_target'] = summary_df.apply(
       lambda x: x['step_at_target'] if x['target reached'] else np.nan, axis=1)
+  summary_df['global_step'] = workload_df.apply(
+      lambda x: x['global_step'][-1], axis=1)
 
   summary_df.sort_values(['workload', 'trial'], inplace=True)
-  summary_df.reset_index(inplace=True)
+  summary_df.reset_index(inplace=True, drop=True)
   
   return summary_df
 
