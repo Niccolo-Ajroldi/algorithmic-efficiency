@@ -258,7 +258,7 @@ def update_params(workload: spec.Workload,
   # Discard average and load previous params
   if global_step > lawa_start_step and queue.full():
     for p,p_old in zip(current_model.parameters(), prev_model.parameters()):
-      p.data = p_old.clone(memory_format=torch.preserve_format)
+      p.data = p_old.to(p.device).clone(memory_format=torch.preserve_format)
   
   current_model.train()
   optimizer_state['optimizer'].zero_grad()
@@ -338,7 +338,7 @@ def update_params(workload: spec.Workload,
     avg = queue.get_avg()
     for p, p_avg in zip(current_model.parameters(), avg):
       assert p.data.shape == p_avg.shape, "LAWA Shape mismatch"
-      p.data = p_avg.clone(memory_format=torch.preserve_format)
+      p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
 
   # log returned model
   if wandb.run is not None:
