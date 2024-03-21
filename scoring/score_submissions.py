@@ -68,30 +68,33 @@ def get_summary_df(workload, workload_df):
   workload_df['index best eval'] = workload_df[validation_metric].apply(
       lambda x: idx_op(x))
   
-  # (nico) incoming
-  summary_df['submission time (s)'] = workload_df.apply(
-      lambda x: x['accumulated_submission_time'][x['index best eval']], axis=1)
-  summary_df['submission time to target (s)'] = summary_df.apply(
-      lambda x: x['submission time (s)'] if x['target reached'] else np.inf,
-      axis=1)
+  # # (nico) incoming from algoperf EXTREMELY MISLEADING
+  # summary_df['submission time (s)'] = workload_df.apply(
+  #     lambda x: x['accumulated_submission_time'][x['index best eval']], axis=1)
+  # summary_df['submission time to target (s)'] = summary_df.apply(
+  #     lambda x: x['submission time (s)'] if x['target reached'] else np.inf,
+  #     axis=1)
   
   # (nico) workaround: TODO: check
   target_reached_step_indicator = workload_df[validation_metric].apply(
       lambda x: target_op(x, validation_target))
   workload_df['index target reached'] = target_reached_step_indicator.apply(
        lambda x: np.argmax(x))
+  summary_df['submission time'] = workload_df.apply(
+      lambda x: x['accumulated_submission_time'][-1], axis=1)
   summary_df['submission_time_at_target'] = workload_df.apply(
       lambda x: x['accumulated_submission_time'][x['index target reached']], axis=1)
   summary_df['score'] = summary_df.apply(
       lambda x: x['submission_time_at_target'] if x['target reached'] else np.inf, axis=1)
+  # summary_df.drop('submission_time_at_target', axis=1, inplace=True)
   summary_df['step_at_target'] = workload_df.apply(
       lambda x: x['global_step'][x['index target reached']], axis=1)
   summary_df['step_at_target'] = summary_df.apply(
       lambda x: x['step_at_target'] if x['target reached'] else np.nan, axis=1)
-  summary_df.drop('submission_time_at_target', axis=1, inplace=True)
-  summary_df['submission time'] = workload_df.apply(
-      lambda x: x['accumulated_submission_time'][-1], axis=1)
 
+  summary_df.sort_values(['workload', 'trial'], inplace=True)
+  summary_df.reset_index(inplace=True)
+  
   return summary_df
 
 
