@@ -29,7 +29,7 @@
     "lawa_interval": {
         "feasible_points": [10, 100, 1000]
     },
-    "lawa_ema": {
+    "lawa_beta": {
         "feasible_points": [0.001, 0.01, 0.1, 0.2, 0.4, 0.8]
     },
     "fake_param": {
