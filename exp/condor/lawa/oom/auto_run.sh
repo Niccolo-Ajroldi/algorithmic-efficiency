@@ -4,7 +4,7 @@ source ~/miniconda3/etc/profile.d/conda.sh
 conda activate alpe
 
 # Env vars
-export OMP_NUM_THREADS=28
+export OMP_NUM_THREADS=8
 export HOME=/home/najroldi
 export CODE_DIR=/home/najroldi/algorithmic-efficiency
 export EXP_DIR=/fast/najroldi/exp/algoperf
@@ -47,6 +47,7 @@ torchrun \
   --experiment_dir=$EXP_DIR  \
   --experiment_name=$experiment_name \
   --save_intermediate_checkpoints=False \
+  --save_checkpoints=False \
   --resume_last_run \
   --use_wandb \
   --max_global_steps=20 \
