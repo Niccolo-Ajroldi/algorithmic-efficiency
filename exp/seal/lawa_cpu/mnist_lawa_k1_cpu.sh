@@ -38,5 +38,6 @@ python3 \
     --use_wandb \
     --save_checkpoints=False \
     --max_global_steps 5000 \
-    --rng_seed=1996 \
-    --torch_deterministic
+    --rng_seed=1996
+
+    # --torch_deterministic

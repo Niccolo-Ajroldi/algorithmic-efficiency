@@ -8,9 +8,9 @@
         "beta2": 0.9981232922116359,
         "weight_decay": 0.16375311233774334,
         "warmup_factor": 0.1,
-        "k": 7,
-        "lawa_interval": 12,
-        "lawa_start_factor": 0.05
+        "k": 5,
+        "lawa_interval": 100,
+        "lawa_start_factor": 0.1
     }
 ]
 
