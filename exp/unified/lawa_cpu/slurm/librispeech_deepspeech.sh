@@ -1,16 +1,16 @@
 #!/bin/bash
 
-#SBATCH --job-name=lawa_ema_ogbg
-#SBATCH --array=1-6
-#SBATCH --error=/ptmp/najroldi/logs/algoperf/err/%x_%A_%a.err
-#SBATCH --output=/ptmp/najroldi/logs/algoperf/out/%x_%A_%a.out
-#SBATCH --time=03:00:00
+#SBATCH --job-name=lawa_cpu
+#SBATCH --array=1-4
+#SBATCH --error=/ptmp/najroldi/logs/algoperf/err/%x_%j.err
+#SBATCH --output=/ptmp/najroldi/logs/algoperf/out/%x_%j.out
+#SBATCH --time=24:00:00
 #SBATCH --ntasks 1
 #SBATCH --requeue
-# --- 1 GPUs on a single node ---
-#SBATCH --gres=gpu:a100:1
-#SBATCH --cpus-per-task=12
-#SBATCH --mem=125000
+# --- 4 GPUs on a full node ---
+#SBATCH --gres=gpu:a100:4
+#SBATCH --cpus-per-task=48
+#SBATCH --mem=500000
 
 source ~/.bashrc
 conda activate alpe
@@ -21,19 +21,19 @@ export EXP_DIR=/ptmp/najroldi/exp/algoperf
 export DATA_DIR=/ptmp/najroldi/data
 
 # Workload
-dataset=ogbg
-workload=ogbg
+dataset=librispeech
+workload=librispeech_deepspeech
 
 # Same seed across trials
 study=1
 rng_seed=1
 
 # Submission
-submission=submissions/lawa_ema/lawa_ema.py
-search_space=exp/unified/lawa_ema/tmp/ogbg_2.json
+submission='submissions/lawa_cpu/lawa.py'
+search_space='exp/unified/lawa_cpu/json/trial_4.json'
 
 # Experiment name
-base_name="lawa_ema_beta09_02"
+base_name="lawa_cpu_01"
 
 # Set config
 experiment_name="${base_name}/study_${study}"
@@ -47,7 +47,11 @@ if [ "$dataset" = "librispeech" ]; then
 fi
 
 # Execute python script
-python3 \
+torchrun \
+  --redirects 1:0,2:0,3:0 \
+  --standalone \
+  --nnodes=1 \
+  --nproc_per_node=4 \
   $CODE_DIR/submission_runner.py \
   --workload=$workload \
   --framework=pytorch \
@@ -59,14 +63,16 @@ python3 \
   --tuning_search_space=$search_space \
   --num_tuning_trials=$num_tuning_trials \
   --trial_index=$trial_index \
-  --rng_seed=$rng_seed \
   --experiment_dir=$EXP_DIR  \
   --experiment_name=$experiment_name \
   --save_intermediate_checkpoints=False \
   --save_checkpoints=False \
-  --use_wandb \
   --resume_last_run \
-  --fixed_space # OCIO!
+  --rng_seed=$rng_seed \
+  --fixed_space \
+  --use_wandb
 
 # resume_last_run: is important when using parallel trials
 # multiple jobs will acess the same folder together
+
+# --use_wandb

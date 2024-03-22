@@ -340,13 +340,13 @@ def update_params(workload: spec.Workload,
       assert p.data.shape == p_avg.shape, "LAWA Shape mismatch"
       p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
 
-  # log returned model
-  if wandb.run is not None:
-    wandb.log({
-        'w_step': global_step,
-        'norm_current_model': mynorm(current_model.parameters()),
-        'norm_current_param_container': mynorm(current_param_container.parameters())
-        })
+  # # log returned model
+  # if wandb.run is not None:
+  #   wandb.log({
+  #       'w_step': global_step,
+  #       'norm_current_model': mynorm(current_model.parameters()),
+  #       'norm_current_param_container': mynorm(current_param_container.parameters())
+  #       })
   
   return (optimizer_state, current_model, new_model_state)
 

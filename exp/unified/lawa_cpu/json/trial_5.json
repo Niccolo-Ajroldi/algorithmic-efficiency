@@ -2,11 +2,11 @@
     "trial_number": {
         "feasible_points": [5]
     },
-    "label_smoothing": {
-      "feasible_points": [0.0]
-    },
     "dropout_rate": {
         "feasible_points": [0.1]
+    },
+    "label_smoothing": {
+        "feasible_points": [0.0]
     },
     "learning_rate": {
       "feasible_points": [0.0017486387539278373]
@@ -17,22 +17,19 @@
     "beta2": {
         "feasible_points": [0.9955159689799007]
     },
-    "warmup_factor": {
-      "feasible_points": [0.02]
-    },
     "weight_decay": {
         "feasible_points": [0.08121616522670176]
     },
+    "warmup_factor": {
+      "feasible_points": [0.02]
+    },
     "lawa_start_factor": {
-        "feasible_points": [0.0]
+      "feasible_points": [0.0]
     },
     "lawa_interval": {
-        "feasible_points": [10, 100, 1000]
+      "feasible_points": [100, 1000]
     },
-    "lawa_beta": {
-        "feasible_points": [0.001, 0.01, 0.1, 0.2, 0.4, 0.8, 0.9, 0.99]
-    },
-    "fake_param": {
-      "feasible_points": [1]
+    "k": {
+      "feasible_points": [10, 20]
     }
-  }
+}
