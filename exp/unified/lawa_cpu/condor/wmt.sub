@@ -1,6 +1,6 @@
 # Define variables
 LOGS_DIR=/fast/najroldi/logs/algoperf
-EXE=exp/unified/lawa_cpu/condor/auto_run_8GPU.sh
+EXE=/home/najroldi/algorithmic-efficiency/exp/unified/lawa_cpu/condor/auto_run_8GPU.sh
 
 # Job specific vars
 +JobName=wmt
