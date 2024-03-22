@@ -1,10 +1,10 @@
 #!/bin/bash
 
-source ~/miniconda3/etc/profile.d/conda.sh
+source ~/.bashrc
 conda activate alpe
 
 # Env vars
-export OMP_NUM_THREADS=64
+export OMP_NUM_THREADS=28
 export HOME=/home/najroldi
 export CODE_DIR=/home/najroldi/algorithmic-efficiency
 export EXP_DIR=/fast/najroldi/exp/algoperf
@@ -46,7 +46,7 @@ torchrun \
   --workload=$workload \
   --framework=pytorch \
   --tuning_ruleset=external \
-  --data_dir=$DATA_DIR/$dataset \
+  --data_dir='/is/cluster/fast/jpiles/imagenet' \
   --imagenet_v2_data_dir=$DATA_DIR/$dataset \
   --librispeech_tokenizer_vocab_path=$tokenizer_path \
   --submission_path=$submission \
@@ -58,4 +58,5 @@ torchrun \
   --save_checkpoints=False \
   --resume_last_run \
   --rng_seed=$rng_seed \
-  --use_wandb
+  --use_wandb \
+  --max_global_steps=10000
