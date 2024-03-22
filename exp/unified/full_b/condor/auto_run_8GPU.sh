@@ -46,7 +46,7 @@ torchrun \
   --workload=$workload \
   --framework=pytorch \
   --tuning_ruleset=external \
-  --data_dir='/is/cluster/fast/jpiles/imagenet' \
+  --data_dir=/is/cluster/fast/jpiles/imagenet \
   --imagenet_v2_data_dir=$DATA_DIR/$dataset \
   --librispeech_tokenizer_vocab_path=$tokenizer_path \
   --submission_path=$submission \
