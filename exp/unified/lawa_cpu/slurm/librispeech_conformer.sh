@@ -30,7 +30,7 @@ rng_seed=1
 
 # Submission
 submission='submissions/lawa_cpu/lawa.py'
-search_space='exp/unified/lawa_cpu/json/trial_4.json'
+search_space='exp/unified/lawa_cpu/json/trial_5.json'
 
 # Experiment name
 base_name="lawa_cpu_01"
