@@ -3,8 +3,9 @@
 source ~/.bashrc
 conda activate alpe
 
-submission_dir=/ptmp/najroldi/exp/algoperf/scored_submissions
-output_dir=/ptmp/najroldi/results/algoperf/scored_submission_3
+# submission_dir=/ptmp/najroldi/exp/algoperf/scored_submissions
+submission_dir=/ptmp/najroldi/tmp
+output_dir=/ptmp/najroldi/results/algoperf/algoperf_logs
 
 python3 scoring/score_submissions.py \
   --submission_directory=$submission_dir \
