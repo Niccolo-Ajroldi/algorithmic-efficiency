@@ -36,7 +36,7 @@ base_name="overhead_lawa_cpu"
 
 # Set config
 experiment_name="${base_name}/study_${study}"
-num_tuning_trials=${SLURM_ARRAY_TASK_MAX}
+num_tuning_trials=1
 
 # Librispeech tokenizer path
 tokenizer_path=''
