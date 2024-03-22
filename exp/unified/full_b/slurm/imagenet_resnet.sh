@@ -1,7 +1,6 @@
 #!/bin/bash
 
 #SBATCH --job-name=full_b_resnet
-#SBATCH --array=1-5
 #SBATCH --error=/ptmp/najroldi/logs/algoperf/err/%x_%A_%a.err
 #SBATCH --output=/ptmp/najroldi/logs/algoperf/out/%x_%A_%a.out
 #SBATCH --time=24:00:00
@@ -29,22 +28,15 @@ study=1
 rng_seed=1
 
 # Submission
-submission='submissions/lawa_cpu/lawa.py'
+submission='prize_qualification_baselines/external_tuning/nadamw_full_b_lighter.py'
 search_space='prize_qualification_baselines/external_tuning/tuning_search_space.json'
 
 # Experiment name
-base_name="nadamw_full_b"
+base_name="resnet_FAST_01"
 
 # Set config
 experiment_name="${base_name}/study_${study}"
-num_tuning_trials=${SLURM_ARRAY_TASK_MAX}
-trial_index=${SLURM_ARRAY_TASK_ID}
-
-# Librispeech tokenizer path
-tokenizer_path=''
-if [ "$dataset" = "librispeech" ]; then
-    tokenizer_path="${DATA_DIR}/librispeech/spm_model.vocab"
-fi
+num_tuning_trials=1
 
 # Execute python script
 torchrun \
@@ -58,18 +50,16 @@ torchrun \
   --tuning_ruleset=external \
   --data_dir=$DATA_DIR/$dataset \
   --imagenet_v2_data_dir=$DATA_DIR/$dataset \
-  --librispeech_tokenizer_vocab_path=$tokenizer_path \
   --submission_path=$submission \
   --tuning_search_space=$search_space \
   --num_tuning_trials=$num_tuning_trials \
-  --trial_index=$trial_index \
   --experiment_dir=$EXP_DIR  \
   --experiment_name=$experiment_name \
   --save_intermediate_checkpoints=False \
   --save_checkpoints=False \
   --resume_last_run \
   --rng_seed=$rng_seed \
-  --fixed_space # OCIO!
+  --use_wandb
 
 # resume_last_run: is important when using parallel trials
 # multiple jobs will acess the same folder together
