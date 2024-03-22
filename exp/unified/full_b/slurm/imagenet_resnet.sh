@@ -2,8 +2,8 @@
 
 #SBATCH --job-name=full_b_resnet
 #SBATCH --array=1-5
-#SBATCH --error=/ptmp/najroldi/logs/algoperf/err/%x_%j.err
-#SBATCH --output=/ptmp/najroldi/logs/algoperf/out/%x_%j.out
+#SBATCH --error=/ptmp/najroldi/logs/algoperf/err/%x_%A_%a.err
+#SBATCH --output=/ptmp/najroldi/logs/algoperf/out/%x_%A_%a.out
 #SBATCH --time=24:00:00
 #SBATCH --ntasks 1
 #SBATCH --requeue
