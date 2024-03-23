@@ -419,7 +419,7 @@ def train_once(
         try:
           eval_start_time = get_time()
           # nico
-          if wandb.run is not None and (global_step % 100 == 0):
+          if wandb.run is not None and FLAGS.extra_wandb_logging:
             wandb.log({
               'my_step': global_step,
               'is_eval_step': 1})
