@@ -336,9 +336,9 @@ def update_params(workload: spec.Workload,
     if queue.full():
       queue.update_avg()
       optimizer_state['return_avg'] = True
-    # Log
-    if wandb.run is not None:
-      wandb.log({'my_step': global_step, 'is_avg_step': 1})
+    # # Log
+    # if wandb.run is not None:
+    #   wandb.log({'my_step': global_step, 'is_avg_step': 1})
   
   # Load avg into model
   if queue.full() and optimizer_state['return_avg']:
@@ -347,20 +347,20 @@ def update_params(workload: spec.Workload,
       assert p.data.shape == p_avg.shape, "LAWA Shape mismatch"
       p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
       
-    # log
-    if wandb.run is not None:
-      wandb.log({
-          'my_step': global_step,
-          'norm_avg': mynorm(queue.get_avg()),
-          })
+    # # log
+    # if wandb.run is not None:
+    #   wandb.log({
+    #       'my_step': global_step,
+    #       'norm_avg': mynorm(queue.get_avg()),
+    #       })
 
-  # log returned model
-  if wandb.run is not None:
-    wandb.log({
-        'my_step': global_step,
-        'norm_current_model': mynorm(current_model.parameters()),
-        'return_avg': optimizer_state['return_avg']
-        })
+  # # log returned model
+  # if wandb.run is not None:
+  #   wandb.log({
+  #       'my_step': global_step,
+  #       'norm_current_model': mynorm(current_model.parameters()),
+  #       'return_avg': optimizer_state['return_avg']
+  #       })
   
   return (optimizer_state, current_model, new_model_state)
 

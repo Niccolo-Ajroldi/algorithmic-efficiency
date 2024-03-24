@@ -28,11 +28,11 @@ study=1
 rng_seed=1
 
 # Submission
-submission=submissions/lawa_cpu/lawa.py
+submission=submissions/lawa_cpu_smart/lawa.py
 search_space=exp/unified/lawa_overhead/json/hparams.json
 
 # Experiment name
-base_name="overhead_lawa_cpu_5000_2"
+base_name="overhead_lawa_cpu_smart_5000_2"
 
 # Set config
 experiment_name="${base_name}/study_${study}"
