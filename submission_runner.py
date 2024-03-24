@@ -675,8 +675,14 @@ def score_submission_on_workload(workload: spec.Workload,
                                      max_global_steps,
                                      tuning_dir_name,
                                      save_checkpoints=save_checkpoints,)
-      all_timings[hi] = timing
-      all_metrics[hi] = metrics
+      # (nico): modified
+      if FLAGS.fixed_space:
+        all_timings.append(timing)
+        all_metrics.append(metrics)
+      else: # (nico): original
+        all_timings[hi] = timing
+        all_metrics[hi] = metrics
+      
       logging.info(f'Tuning trial {hi + 1}/{num_tuning_trials}')
       logging.info(f'Hyperparameters: {tuning_search_space[hi]}')
       logging.info(f'Metrics: {metrics}')
