@@ -621,7 +621,9 @@ def score_submission_on_workload(workload: spec.Workload,
     # (nico) check for parallel trials
     if trial_index is not None:
       if trial_index < 1 or trial_index > num_tuning_trials:
-        raise ValueError('trial_index should be in [1, num_tuning_trials]')
+        raise ValueError(
+          'trial_index should be in [1, num_tuning_trials], recieved: {}'.format(
+            trial_index))
     
     # (nico) halton.generate_search always produce the same list, but order may vary
     tuning_search_space.sort()

@@ -20,8 +20,8 @@ export EXP_DIR=/ptmp/najroldi/exp/algoperf
 export DATA_DIR=/ptmp/najroldi/data
 
 # Workload
-dataset=wmt
-workload=wmt
+dataset=criteo1tb
+workload=criteo1tb
 
 # Same seed across trials
 study=1
@@ -32,7 +32,7 @@ submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_bud
 search_space=exp/unified/lawa_overhead/json/hparams.json
 
 # Experiment name
-base_name="overhead_nadamw_5000_2"
+base_name="overhead_nadamw_5000_3"
 
 # Set config
 experiment_name="${base_name}/study_${study}"

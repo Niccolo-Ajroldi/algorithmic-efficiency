@@ -20,7 +20,7 @@ export EXP_DIR=/ptmp/najroldi/exp/algoperf
 export DATA_DIR=/ptmp/najroldi/data
 
 # Workload
-dataset=wmt
+dataset=criteo1tb
 workload=wmt
 
 # Same seed across trials
@@ -32,7 +32,7 @@ submission=submissions/lawa_cpu_smart_bf16/lawa.py
 search_space=exp/unified/lawa_overhead/json/hparams.json
 
 # Experiment name
-base_name="overhead_lawa_cpu_smart_bfp16_5000_2"
+base_name="overhead_lawa_cpu_smart_bfp16_5000_3"
 
 # Set config
 experiment_name="${base_name}/study_${study}"

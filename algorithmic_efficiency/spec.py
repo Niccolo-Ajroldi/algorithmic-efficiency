@@ -331,6 +331,7 @@ class Workload(metaclass=abc.ABCMeta):
     #     data_dir=data_dir,
     #     global_step=global_step)
     # eval_metrics = {'train/' + k: v for k, v in train_metrics.items()}
+    eval_metrics = {}
     
     # We always require a validation set.
     logging.info('Evaluating on the validation split.')
