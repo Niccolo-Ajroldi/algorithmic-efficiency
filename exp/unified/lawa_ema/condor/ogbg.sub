@@ -1,15 +1,15 @@
 # Define variables
 LOGS_DIR=/fast/najroldi/logs/algoperf
-EXE=/home/najroldi/algorithmic-efficiency/exp/unified/baseline/condor/auto_run_array.sh
+EXE=exp/unified/lawa_ema/condor/auto_run_array.sh
 
 # Job specific vars
-dataset=imagenet
-workload=imagenet_vit
+dataset=ogbg
+workload=ogbg
 submission=prize_qualification_baselines/external_tuning/nadamw_full_b_lighter.py
-search_space=exp/unified/baseline/json/trial_4.json
+search_space=exp/unified/baseline/json/trial_5.json
 exp_name=nb_01
 study=1
-num_tuning_trials=1
+num_tuning_trials=5
 rng_seed=1
 
 # Args

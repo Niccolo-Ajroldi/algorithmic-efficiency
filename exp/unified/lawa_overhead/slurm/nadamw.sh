@@ -3,7 +3,7 @@
 #SBATCH --job-name=overhead_nadamw
 #SBATCH --error=/ptmp/najroldi/logs/algoperf/err/%x_%A_%a.err
 #SBATCH --output=/ptmp/najroldi/logs/algoperf/out/%x_%A_%a.out
-#SBATCH --time=03:00:00
+#SBATCH --time=05:00:00
 #SBATCH --ntasks 1
 #SBATCH --requeue
 # --- 4 GPUs on a full node ---
@@ -20,8 +20,8 @@ export EXP_DIR=/ptmp/najroldi/exp/algoperf
 export DATA_DIR=/ptmp/najroldi/data
 
 # Workload
-dataset=imagenet
-workload=imagenet_vit
+dataset=criteo1tb
+workload=criteo1tb
 
 # Same seed across trials
 study=1
@@ -32,7 +32,7 @@ submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_bud
 search_space=exp/unified/lawa_overhead/json/hparams.json
 
 # Experiment name
-base_name="overhead_nadamw"
+base_name="overhead_nadamw_5000_3"
 
 # Set config
 experiment_name="${base_name}/study_${study}"
@@ -67,7 +67,7 @@ torchrun \
   --resume_last_run \
   --rng_seed=$rng_seed \
   --use_wandb \
-  --max_global_steps=200
+  --max_global_steps=5000
 
 # resume_last_run: is important when using parallel trials
 # multiple jobs will acess the same folder together

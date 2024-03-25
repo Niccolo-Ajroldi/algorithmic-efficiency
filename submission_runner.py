@@ -621,7 +621,9 @@ def score_submission_on_workload(workload: spec.Workload,
     # (nico) check for parallel trials
     if trial_index is not None:
       if trial_index < 1 or trial_index > num_tuning_trials:
-        raise ValueError('trial_index should be in [1, num_tuning_trials]')
+        raise ValueError(
+          'trial_index should be in [1, num_tuning_trials], recieved: {}'.format(
+            trial_index))
     
     # (nico) halton.generate_search always produce the same list, but order may vary
     tuning_search_space.sort()
@@ -631,10 +633,13 @@ def score_submission_on_workload(workload: spec.Workload,
     tuning_search_space_iter = itertools.islice(
         enumerate(tuning_search_space), hparam_start_index, hparam_end_index)
     for hi, hyperparameters in tuning_search_space_iter:
-
+      
       if trial_index is not None and (hi + 1) != trial_index:
         continue
-
+      
+      import pdb
+      pdb.set_trace()
+      
       # Generate a new seed from hardware sources of randomness for each trial.
       if not rng_seed:
         rng_seed = struct.unpack('I', os.urandom(4))[0]
@@ -675,8 +680,14 @@ def score_submission_on_workload(workload: spec.Workload,
                                      max_global_steps,
                                      tuning_dir_name,
                                      save_checkpoints=save_checkpoints,)
-      all_timings[hi] = timing
-      all_metrics[hi] = metrics
+      # (nico): modified
+      if FLAGS.fixed_space:
+        all_timings.append(timing)
+        all_metrics.append(metrics)
+      else: # (nico): original
+        all_timings[hi] = timing
+        all_metrics[hi] = metrics
+      
       logging.info(f'Tuning trial {hi + 1}/{num_tuning_trials}')
       logging.info(f'Hyperparameters: {tuning_search_space[hi]}')
       logging.info(f'Metrics: {metrics}')

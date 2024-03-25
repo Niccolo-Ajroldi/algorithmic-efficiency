@@ -12,18 +12,18 @@
       "feasible_points": [0.004958460849689891]
     },
     "one_minus_beta1": {
-      "feasible_points": [0.13625575743]
+        "feasible_points": [0.13625575743]
     },
     "beta2": {
-      "feasible_points": [0.6291854735396584]
+        "feasible_points": [0.6291854735396584]
     },
     "weight_decay": {
-      "feasible_points": [0.1147386261512052]
+        "feasible_points": [0.1147386261512052]
     },
     "warmup_factor": {
-        "feasible_points": [0.02]
+      "feasible_points": [0.02]
     },
     "fake_param": {
-        "feasible_points": [1,2,3,4,5]
+      "feasible_points": [1,2,3,4,5]
     }
   }

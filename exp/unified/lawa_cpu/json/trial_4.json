@@ -26,10 +26,10 @@
     "lawa_start_factor": {
       "feasible_points": [0.0]
     },
-    "lawa_interval": {
-      "feasible_points": [100, 1000]
+    "lawa_interval_scaling": {
+      "feasible_points": [0.01, 0.0125, 0.02]
     },
     "k": {
-      "feasible_points": [10, 20]
+      "feasible_points": [15, 20]
     }
   }

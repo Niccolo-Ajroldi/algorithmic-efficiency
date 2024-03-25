@@ -21,9 +21,6 @@
         "feasible_points": [0.08135402759553023]
     },
     "warmup_factor": {
-        "feasible_points": [0.05]
-    },
-    "fake_param": {
-        "feasible_points": [1,2,3,4,5]
+      "feasible_points": [0.05]
     }
 }

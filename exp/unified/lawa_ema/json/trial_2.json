@@ -21,9 +21,18 @@
         "feasible_points": [0.08135402759553023]
     },
     "warmup_factor": {
-        "feasible_points": [0.05]
+      "feasible_points": [0.05]
+    },
+    "lawa_start_factor": {
+        "feasible_points": [0.0]
+    },
+    "lawa_interval": {
+        "feasible_points": [1000]
+    },
+    "lawa_beta": {
+        "feasible_points": [0.6, 0.8, 0.9]
     },
     "fake_param": {
-        "feasible_points": [1,2,3,4,5]
+      "feasible_points": [1]
     }
 }

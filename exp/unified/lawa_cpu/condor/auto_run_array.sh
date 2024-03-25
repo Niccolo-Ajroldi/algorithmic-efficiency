@@ -4,6 +4,7 @@ source ~/miniconda3/etc/profile.d/conda.sh
 conda activate alpe
 
 # Env vars
+export OMP_NUM_THREADS=32
 export HOME=/home/najroldi
 export CODE_DIR=/home/najroldi/algorithmic-efficiency
 export EXP_DIR=/fast/najroldi/exp/algoperf
@@ -35,13 +36,23 @@ if [ "$dataset" = "librispeech" ]; then
     tokenizer_path="${DATA_DIR}/librispeech/spm_model.vocab"
 fi
 
+# Imagenet is in a different folder on mpi cluster
+data_dir_2=$DATA_DIR/$dataset
+if [ "$dataset" = "imagenet" ]; then
+    data_dir="/is/cluster/fast/jpiles/imagenet"
+fi
+
 # Execute python script
-python \
+torchrun \
+  --redirects 1:0,2:0,3:0 \
+  --standalone \
+  --nnodes=1 \
+  --nproc_per_node=4 \
   $CODE_DIR/submission_runner.py \
   --workload=$workload \
   --framework=pytorch \
   --tuning_ruleset=external \
-  --data_dir=$DATA_DIR/$dataset \
+  --data_dir=$data_dir_2 \
   --imagenet_v2_data_dir=$DATA_DIR/$dataset \
   --librispeech_tokenizer_vocab_path=$tokenizer_path \
   --submission_path=$submission \
@@ -53,6 +64,6 @@ python \
   --save_intermediate_checkpoints=False \
   --save_checkpoints=False \
   --resume_last_run \
+  --use_wandb \
   --rng_seed=$rng_seed \
-  --fixed_space \
-  --use_wandb
+  --fixed_space

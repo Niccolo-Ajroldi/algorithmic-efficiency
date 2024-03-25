@@ -1,17 +1,16 @@
 # Define variables
 LOGS_DIR=/fast/najroldi/logs/algoperf
-EXE=/home/najroldi/algorithmic-efficiency/exp/unified/lawa_cpu/condor/auto_run_8GPU.sh
+EXE=/home/najroldi/algorithmic-efficiency/exp/unified/lawa_cpu/condor/auto_run_array.sh
 
 # Job specific vars
-+JobName=wmt
-
 dataset=wmt
 workload=wmt
-submission=submissions/lawa_cpu/lawa.py
 search_space=exp/unified/lawa_cpu/json/trial_2.json
-exp_name=lawa_cpu_01
+
+submission=submissions/lawa_cpu/lawa.py
+exp_name=lawa_cpu_10
 study=1
-num_tuning_trials=4
+num_tuning_trials=6
 rng_seed=1
 
 # Args
@@ -34,8 +33,8 @@ log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 
 # Specs
 request_memory = 500000
-request_cpus = 64
-request_gpus = 8
+request_cpus = 32
+request_gpus = 4
 requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-40GB")
 
 queue $(num_tuning_trials)

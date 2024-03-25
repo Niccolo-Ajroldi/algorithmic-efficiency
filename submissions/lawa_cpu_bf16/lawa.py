@@ -108,7 +108,7 @@ class NAdamW(torch.optim.Optimizer):
         params_with_grad.append(p)
         if p.grad.is_sparse:
           raise RuntimeError('NAdamW does not support sparse gradients')
-        grads.append(p.grad)
+        grads.append(p.grad.data.to(torch.bfloat16)) # (nico): bf16
 
         state = self.state[p]
 
@@ -117,10 +117,12 @@ class NAdamW(torch.optim.Optimizer):
           state['step'] = torch.tensor(0.)
           # Exponential moving average of gradient values
           state['exp_avg'] = torch.zeros_like(
-              p, memory_format=torch.preserve_format)
+              p, memory_format=torch.preserve_format, 
+              dtype=torch.bfloat16) # (nico): bf16
           # Exponential moving average of squared gradient values
           state['exp_avg_sq'] = torch.zeros_like(
-              p, memory_format=torch.preserve_format)
+              p, memory_format=torch.preserve_format, 
+              dtype=torch.bfloat16) # (nico): bf16
 
         exp_avgs.append(state['exp_avg'])
         exp_avg_sqs.append(state['exp_avg_sq'])
@@ -189,10 +191,14 @@ def nadamw(params: List[Tensor],
 
     step_size = lr / bias_correction1
 
+    # EMA copy in fp32
+    exp_avg_f32 = exp_avg.to(torch.float32)
+    exp_avg_sq_f32 = exp_avg_sq.to(torch.float32)
+    
     bias_correction2_sqrt = math.sqrt(bias_correction2)
-    denom = (exp_avg_sq.sqrt() / bias_correction2_sqrt).add_(eps)
-
-    param.addcdiv_(exp_avg, denom, value=-step_size)
+    denom_f32 = (exp_avg_sq_f32.sqrt() / bias_correction2_sqrt).add_(eps)
+    
+    param.addcdiv_(exp_avg_f32, denom_f32, value=-step_size)
     exp_avg.sub_(grad, alpha=1 - beta1).div_(beta1)
 
 
@@ -253,14 +259,16 @@ def update_params(workload: spec.Workload,
   prev_model = optimizer_state['prev_model']
   queue = optimizer_state['queue']
   lawa_start_step = math.ceil(workload.step_hint * hyperparameters.lawa_start_factor)
-  lawa_interval = hyperparameters.lawa_interval
-  
+  try:
+    lawa_interval = math.ceil(workload.step_hint * hyperparameters.lawa_interval_scaling)
+  except AttributeError: # allow for backward compatibility TODO:remove
+    lawa_interval = hyperparameters.lawa_interval
+    
   # Discard average and load previous params
-  # if global_step > lawa_start_step and queue.full(): 
   if optimizer_state['return_avg']:
     for p,p_old in zip(current_model.parameters(), prev_model.parameters()):
-      p.data = p_old.to(p.device).clone(memory_format=torch.preserve_format)
-  
+      p.data = p_old.clone(memory_format=torch.preserve_format)
+    
   # eval just happened -> we stop loading previous model and returning avg
   if len(eval_results) > 0:
     if (global_step-1) == eval_results[-1][0]:
@@ -306,23 +314,6 @@ def update_params(workload: spec.Workload,
   optimizer_state['optimizer'].step()
   optimizer_state['scheduler'].step()
   
-  # Log training metrics - loss, grad_norm, batch_size.
-  if global_step <= 100 or global_step % 500 == 0:
-    with torch.no_grad():
-      parameters = [p for p in current_model.parameters() if p.grad is not None]
-      grad_norm = torch.norm(
-          torch.stack([torch.norm(p.grad.detach(), 2) for p in parameters]), 2)
-    if workload.metrics_logger is not None:
-      workload.metrics_logger.append_scalar_metrics(
-          {
-              'loss': loss.item(),
-              'grad_norm': grad_norm.item(),
-          }, global_step)
-    logging.info('%d) loss = %0.3f, grad_norm = %0.3f',
-                 global_step,
-                 loss.item(),
-                 grad_norm.item())
-
   # Save previous parameters
   if global_step >= lawa_start_step:
     prev_model.update(current_model.parameters())
@@ -330,37 +321,17 @@ def update_params(workload: spec.Workload,
   # Update queue and avg
   if global_step >= lawa_start_step and \
       (global_step-lawa_start_step) % lawa_interval == 0:
-    # Update queue
     queue.push(current_model.parameters())
-    # Update avg
     if queue.full():
       queue.update_avg()
       optimizer_state['return_avg'] = True
-    # Log
-    if wandb.run is not None:
-      wandb.log({'my_step': global_step, 'is_avg_step': 1})
   
   # Load avg into model
-  if queue.full() and optimizer_state['return_avg']:
+  if optimizer_state['return_avg']:
     avg = queue.get_avg()
     for p, p_avg in zip(current_model.parameters(), avg):
       assert p.data.shape == p_avg.shape, "LAWA Shape mismatch"
       p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
-      
-    # log
-    if wandb.run is not None:
-      wandb.log({
-          'my_step': global_step,
-          'norm_avg': mynorm(queue.get_avg()),
-          })
-
-  # log returned model
-  if wandb.run is not None:
-    wandb.log({
-        'my_step': global_step,
-        'norm_current_model': mynorm(current_model.parameters()),
-        'return_avg': optimizer_state['return_avg']
-        })
   
   return (optimizer_state, current_model, new_model_state)
 

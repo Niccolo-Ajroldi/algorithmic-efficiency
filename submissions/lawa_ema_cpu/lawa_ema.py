@@ -14,13 +14,7 @@ from torch.optim.lr_scheduler import SequentialLR
 from algorithmic_efficiency import spec
 from algorithmic_efficiency.pytorch_utils import pytorch_setup
 
-from .lawa_utils import LAWAQueue, ListOfParams
-
-import wandb
-
-def mynorm(params):
-  return torch.norm(torch.stack([torch.norm(p.detach().clone(memory_format=torch.preserve_format), 2) for p in params]), 2)
-
+from .lawa_ema_utils import LAWAEma, ListOfParams
 
 USE_PYTORCH_DDP = pytorch_setup()[0]
 
@@ -108,7 +102,7 @@ class NAdamW(torch.optim.Optimizer):
         params_with_grad.append(p)
         if p.grad.is_sparse:
           raise RuntimeError('NAdamW does not support sparse gradients')
-        grads.append(p.grad.data.to(torch.bfloat16)) # (nico): bf16
+        grads.append(p.grad)
 
         state = self.state[p]
 
@@ -117,12 +111,10 @@ class NAdamW(torch.optim.Optimizer):
           state['step'] = torch.tensor(0.)
           # Exponential moving average of gradient values
           state['exp_avg'] = torch.zeros_like(
-              p, memory_format=torch.preserve_format, 
-              dtype=torch.bfloat16) # (nico): bf16
+              p, memory_format=torch.preserve_format)
           # Exponential moving average of squared gradient values
           state['exp_avg_sq'] = torch.zeros_like(
-              p, memory_format=torch.preserve_format, 
-              dtype=torch.bfloat16) # (nico): bf16
+              p, memory_format=torch.preserve_format)
 
         exp_avgs.append(state['exp_avg'])
         exp_avg_sqs.append(state['exp_avg_sq'])
@@ -191,14 +183,10 @@ def nadamw(params: List[Tensor],
 
     step_size = lr / bias_correction1
 
-    # EMA copy in fp32
-    exp_avg_f32 = exp_avg.to(torch.float32)
-    exp_avg_sq_f32 = exp_avg_sq.to(torch.float32)
-    
     bias_correction2_sqrt = math.sqrt(bias_correction2)
-    denom_f32 = (exp_avg_sq_f32.sqrt() / bias_correction2_sqrt).add_(eps)
-    
-    param.addcdiv_(exp_avg_f32, denom_f32, value=-step_size)
+    denom = (exp_avg_sq.sqrt() / bias_correction2_sqrt).add_(eps)
+
+    param.addcdiv_(exp_avg, denom, value=-step_size)
     exp_avg.sub_(grad, alpha=1 - beta1).div_(beta1)
 
 
@@ -220,7 +208,7 @@ def init_optimizer_state(workload: spec.Workload,
                      hyperparameters.beta2),
               eps=1e-8,
               weight_decay=hyperparameters.weight_decay),
-      'queue': LAWAQueue(maxlen=hyperparameters.k),
+      'LAWA_ema': LAWAEma(beta=hyperparameters.lawa_beta),
       'prev_model': ListOfParams(model_params.parameters()),
       'return_avg': False
   }
@@ -254,37 +242,27 @@ def update_params(workload: spec.Workload,
   """Return (updated_optimizer_state, updated_params, updated_model_state)."""
   del current_params_types
   del loss_type
+  del eval_results
 
   current_model = current_param_container
   prev_model = optimizer_state['prev_model']
-  queue = optimizer_state['queue']
+  lawa_ema = optimizer_state['LAWA_ema']
   lawa_start_step = math.ceil(workload.step_hint * hyperparameters.lawa_start_factor)
-  lawa_interval = hyperparameters.lawa_interval
-  
-  # log returned model
-  if wandb.run is not None:
-    wandb.log({
-        'my_step': global_step,
-        'norm_1': mynorm(current_model.parameters()),
-        })
+  try:
+    lawa_interval = math.ceil(workload.step_hint * hyperparameters.lawa_interval_scaling)
+  except AttributeError: # allow for backward compatibility TODO:remove
+    lawa_interval = hyperparameters.lawa_interval 
   
   # Discard average and load previous params
   if optimizer_state['return_avg']:
     for p,p_old in zip(current_model.parameters(), prev_model.parameters()):
-      p.data = p_old.clone(memory_format=torch.preserve_format)
-  
-  # log returned model
-  if wandb.run is not None:
-    wandb.log({
-        'my_step': global_step,
-        'norm_2': mynorm(current_model.parameters()),
-        })
+      p.data = p_old.to(p.device).clone(memory_format=torch.preserve_format)
   
   # eval just happened -> we stop loading previous model and returning avg
   if len(eval_results) > 0:
     if (global_step-1) == eval_results[-1][0]:
       optimizer_state['return_avg'] = False
-    
+  
   current_model.train()
   optimizer_state['optimizer'].zero_grad()
 
@@ -325,63 +303,22 @@ def update_params(workload: spec.Workload,
   optimizer_state['optimizer'].step()
   optimizer_state['scheduler'].step()
   
-  # Log training metrics - loss, grad_norm, batch_size.
-  if global_step <= 100 or global_step % 500 == 0:
-    with torch.no_grad():
-      parameters = [p for p in current_model.parameters() if p.grad is not None]
-      grad_norm = torch.norm(
-          torch.stack([torch.norm(p.grad.detach(), 2) for p in parameters]), 2)
-    if workload.metrics_logger is not None:
-      workload.metrics_logger.append_scalar_metrics(
-          {
-              'loss': loss.item(),
-              'grad_norm': grad_norm.item(),
-          }, global_step)
-    logging.info('%d) loss = %0.3f, grad_norm = %0.3f',
-                 global_step,
-                 loss.item(),
-                 grad_norm.item())
-
   # Save previous parameters
   if global_step >= lawa_start_step:
     prev_model.update(current_model.parameters())
   
-  # Update queue and avg
+  # Update lawa_ema
   if global_step >= lawa_start_step and \
       (global_step-lawa_start_step) % lawa_interval == 0:
-    # Update queue
-    queue.push(current_model.parameters())
-    # Update avg
-    if queue.full():
-      queue.update_avg()
-      optimizer_state['return_avg'] = True
-    # Log
-    if wandb.run is not None:
-      wandb.log({'my_step': global_step, 'is_avg_step': 1})
+    lawa_ema.push(current_model.parameters())
+    optimizer_state['return_avg'] = True
   
   # Load avg into model
-  if queue.full() and optimizer_state['return_avg']:
-    avg = queue.get_avg()
+  if optimizer_state['return_avg']:
+    avg = lawa_ema.get_avg()
     for p, p_avg in zip(current_model.parameters(), avg):
-      assert p.data.shape == p_avg.shape, "LAWA Shape mismatch"
       p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
       
-    # log
-    if wandb.run is not None:
-      wandb.log({
-          'my_step': global_step,
-          'norm_avg': mynorm(queue.get_avg()),
-          })
-
-  # log returned model
-  if wandb.run is not None:
-    wandb.log({
-        'my_step': global_step,
-        'norm_3_current_model': mynorm(current_model.parameters()),
-        'norm_4_prev': mynorm(prev_model.parameters()),
-        'return_avg': optimizer_state['return_avg']
-        })
-  
   return (optimizer_state, current_model, new_model_state)
 
 
