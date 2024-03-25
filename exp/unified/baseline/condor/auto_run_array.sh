@@ -4,7 +4,7 @@ source ~/miniconda3/etc/profile.d/conda.sh
 conda activate alpe
 
 # Env vars
-export OMP_NUM_THREADS=16
+export OMP_NUM_THREADS=32
 export HOME=/home/najroldi
 export CODE_DIR=/home/najroldi/algorithmic-efficiency
 export EXP_DIR=/fast/najroldi/exp/algoperf
@@ -36,15 +36,18 @@ if [ "$dataset" = "librispeech" ]; then
     tokenizer_path="${DATA_DIR}/librispeech/spm_model.vocab"
 fi
 
-# print GPU info
-nvidia-smi
+# Librispeech tokenizer path
+tokenizer_path=''
+if [ "$dataset" = "imagenet" ]; then
+    tokenizer_path="${DATA_DIR}/librispeech/spm_model.vocab"
+fi
 
 # Execute python script
 torchrun \
-  --redirects 1:0 \
+  --redirects 1:0,2:0,3:0 \
   --standalone \
   --nnodes=1 \
-  --nproc_per_node=2 \
+  --nproc_per_node=4 \
   $CODE_DIR/submission_runner.py \
   --workload=$workload \
   --framework=pytorch \

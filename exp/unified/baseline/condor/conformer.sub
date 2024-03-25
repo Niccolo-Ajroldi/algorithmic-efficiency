@@ -34,8 +34,8 @@ log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 
 # Specs
 request_memory = 500000
-request_cpus = 16
-request_gpus = 2
-requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB")
+request_cpus = 32
+request_gpus = 4
+requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-40GB")
 
 queue $(num_tuning_trials)

@@ -24,6 +24,6 @@
       "feasible_points": [0.02]
     },
     "fake_param": {
-      "feasible_points": [1,2,3,4,5]
+        "feasible_points": [1]
     }
 }

@@ -31,10 +31,10 @@ error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
 output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
 log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 
-# Specs: 1xA100, 40GB of VRAM each
-request_memory = 200000
-request_cpus = 12
-request_gpus = 1
+# Specs: 4xA100, 40GB of VRAM each
+request_memory = 500000
+request_cpus = 48
+request_gpus = 4
 requirements = (TARGET.CUDACapability == 8.0) && (CUDAGlobalMemoryMb >= 40000) && (CUDAGlobalMemoryMb < 79000)
 
 # Submit parallel jobs
