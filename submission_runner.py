@@ -637,9 +637,6 @@ def score_submission_on_workload(workload: spec.Workload,
       if trial_index is not None and (hi + 1) != trial_index:
         continue
       
-      import pdb
-      pdb.set_trace()
-      
       # Generate a new seed from hardware sources of randomness for each trial.
       if not rng_seed:
         rng_seed = struct.unpack('I', os.urandom(4))[0]
