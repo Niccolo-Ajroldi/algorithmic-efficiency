@@ -248,10 +248,7 @@ def update_params(workload: spec.Workload,
   prev_model = optimizer_state['prev_model']
   lawa_ema = optimizer_state['LAWA_ema']
   lawa_start_step = math.ceil(workload.step_hint * hyperparameters.lawa_start_factor)
-  try:
-    lawa_interval = math.ceil(workload.step_hint * hyperparameters.lawa_interval_scaling)
-  except AttributeError: # allow for backward compatibility TODO:remove
-    lawa_interval = hyperparameters.lawa_interval 
+  lawa_interval = math.ceil(workload.step_hint * hyperparameters.lawa_interval_scaling)
   
   # Discard average and load previous params
   if optimizer_state['return_avg']:

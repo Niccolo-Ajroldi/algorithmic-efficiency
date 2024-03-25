@@ -36,7 +36,7 @@ if [ "$dataset" = "librispeech" ]; then
     tokenizer_path="${DATA_DIR}/librispeech/spm_model.vocab"
 fi
 
-# Imagenet is in a different folder on raven
+# Imagenet is in a different folder on mpi cluster
 data_dir_2=$DATA_DIR/$dataset
 if [ "$dataset" = "imagenet" ]; then
     data_dir="/is/cluster/fast/jpiles/imagenet"
@@ -66,4 +66,4 @@ torchrun \
   --resume_last_run \
   --use_wandb \
   --rng_seed=$rng_seed \
-  --fixed_space # ocio!
+  --fixed_space

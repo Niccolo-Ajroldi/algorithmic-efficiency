@@ -24,15 +24,12 @@
       "feasible_points": [0.05]
     },
     "lawa_start_factor": {
-        "feasible_points": [0.0]
+      "feasible_points": [0.0, 0.25]
     },
-    "lawa_interval": {
-        "feasible_points": [1000]
+    "lawa_interval_scaling": {
+      "feasible_points": [0.01, 0.0125, 0.02]
     },
     "lawa_beta": {
-        "feasible_points": [0.6, 0.8, 0.9]
-    },
-    "fake_param": {
-      "feasible_points": [1]
+      "feasible_points": [0.2, 0.4, 0.6, 0.8]
     }
 }
