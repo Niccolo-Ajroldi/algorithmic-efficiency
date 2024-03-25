@@ -1,16 +1,15 @@
 # Define variables
 LOGS_DIR=/fast/najroldi/logs/algoperf
-EXE=/home/najroldi/algorithmic-efficiency/exp/unified/lawa_ema/auto_run_array.sh
+EXE=exp/unified/lawa_ema/condor/auto_run_array.sh
 
 # Job specific vars
-+JobName=lawa_ema_01
-dataset=fastmri
-workload=fastmri
-submission=submissions/lawa/lawa.py
-search_space=exp/condor/lawa/lawa/space_array.json
-exp_name=lawa_ema_01
+dataset=wmt
+workload=wmt
+submission=prize_qualification_baselines/external_tuning/nadamw_full_b_lighter.py
+search_space=exp/unified/baseline/json/trial_2.json
+exp_name=nb_01
 study=1
-num_tuning_trials=12
+num_tuning_trials=1
 rng_seed=1
 
 # Args
@@ -31,11 +30,10 @@ error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
 output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
 log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 
-# Specs: 4xA100, 40GB of VRAM each
+# Specs
 request_memory = 500000
-request_cpus = 48
+request_cpus = 32
 request_gpus = 4
-requirements = (TARGET.CUDACapability == 8.0) && (CUDAGlobalMemoryMb >= 40000) && (CUDAGlobalMemoryMb < 79000)
+requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-40GB")
 
-# Submit parallel jobs
 queue $(num_tuning_trials)

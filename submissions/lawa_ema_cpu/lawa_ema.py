@@ -14,13 +14,7 @@ from torch.optim.lr_scheduler import SequentialLR
 from algorithmic_efficiency import spec
 from algorithmic_efficiency.pytorch_utils import pytorch_setup
 
-from .lawa_utils import LAWAQueue, ListOfParams
-
-import wandb
-
-def mynorm(params):
-  return torch.norm(torch.stack([torch.norm(p.detach().clone(memory_format=torch.preserve_format), 2) for p in params]), 2)
-
+from .lawa_ema_utils import LAWAEma, ListOfParams
 
 USE_PYTORCH_DDP = pytorch_setup()[0]
 
@@ -214,8 +208,9 @@ def init_optimizer_state(workload: spec.Workload,
                      hyperparameters.beta2),
               eps=1e-8,
               weight_decay=hyperparameters.weight_decay),
-      'queue': LAWAQueue(maxlen=hyperparameters.k),
+      'LAWA_ema': LAWAEma(beta=hyperparameters.lawa_beta),
       'prev_model': ListOfParams(model_params.parameters()),
+      'return_avg': False
   }
 
   def pytorch_cosine_warmup(step_hint: int, hyperparameters, optimizer):
@@ -251,14 +246,19 @@ def update_params(workload: spec.Workload,
 
   current_model = current_param_container
   prev_model = optimizer_state['prev_model']
-  queue = optimizer_state['queue']
+  lawa_ema = optimizer_state['LAWA_ema']
   lawa_start_step = math.ceil(workload.step_hint * hyperparameters.lawa_start_factor)
   lawa_interval = hyperparameters.lawa_interval
   
-  # # Discard average and load previous params
-  # if global_step > lawa_start_step and queue.full():
-  #   for p,p_old in zip(current_model.parameters(), prev_model.parameters()):
-  #     p.data = p_old.clone(memory_format=torch.preserve_format)
+  # Discard average and load previous params
+  if optimizer_state['return_avg']:
+    for p,p_old in zip(current_model.parameters(), prev_model.parameters()):
+      p.data = p_old.to(p.device).clone(memory_format=torch.preserve_format)
+  
+  # eval just happened -> we stop loading previous model and returning avg
+  if len(eval_results) > 0:
+    if (global_step-1) == eval_results[-1][0]:
+      optimizer_state['return_avg'] = False
   
   current_model.train()
   optimizer_state['optimizer'].zero_grad()
@@ -300,43 +300,22 @@ def update_params(workload: spec.Workload,
   optimizer_state['optimizer'].step()
   optimizer_state['scheduler'].step()
   
-  # Log training metrics - loss, grad_norm, batch_size.
-  if global_step <= 100 or global_step % 500 == 0:
-    with torch.no_grad():
-      parameters = [p for p in current_model.parameters() if p.grad is not None]
-      grad_norm = torch.norm(
-          torch.stack([torch.norm(p.grad.detach(), 2) for p in parameters]), 2)
-    if workload.metrics_logger is not None:
-      workload.metrics_logger.append_scalar_metrics(
-          {
-              'loss': loss.item(),
-              'grad_norm': grad_norm.item(),
-          }, global_step)
-    logging.info('%d) loss = %0.3f, grad_norm = %0.3f',
-                 global_step,
-                 loss.item(),
-                 grad_norm.item())
-
-  # # Save previous parameters
-  # if global_step >= lawa_start_step:
-  #   prev_model.update(current_model.parameters())
+  # Save previous parameters
+  if global_step >= lawa_start_step:
+    prev_model.update(current_model.parameters())
   
-  # Update queue and avg
+  # Update lawa_ema
   if global_step >= lawa_start_step and \
       (global_step-lawa_start_step) % lawa_interval == 0:
-    # Update queue
-    queue.push(current_model.parameters())
-    # Update avg
-    if queue.full():
-      queue.update_avg()
+    lawa_ema.push(current_model.parameters())
+    optimizer_state['return_avg'] = True
   
-  # # Load avg into model
-  # if queue.full():
-  #   avg = queue.get_avg()
-  #   for p, p_avg in zip(current_model.parameters(), avg):
-  #     assert p.data.shape == p_avg.shape, "LAWA Shape mismatch"
-  #     p.data = p_avg.clone(memory_format=torch.preserve_format)
-  
+  # Load avg into model
+  if optimizer_state['return_avg']:
+    avg = lawa_ema.get_avg()
+    for p, p_avg in zip(current_model.parameters(), avg):
+      p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
+      
   return (optimizer_state, current_model, new_model_state)
 
 
