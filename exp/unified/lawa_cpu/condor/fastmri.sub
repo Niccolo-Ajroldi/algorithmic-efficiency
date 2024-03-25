@@ -7,6 +7,7 @@ dataset=fastmri
 workload=fastmri
 search_space=exp/unified/lawa_cpu/json/trial_4.json
 
+# Submission
 submission=submissions/lawa_cpu/lawa.py
 exp_name=lawa_cpu_10
 study=1
