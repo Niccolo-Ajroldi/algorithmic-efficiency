@@ -5,8 +5,8 @@ EXE=/home/najroldi/algorithmic-efficiency/exp/unified/lawa_overhead/condor/auto_
 # Job specific vars
 dataset=criteo1tb
 workload=criteo1tb
-submission=prize_qualification_baselines/external_tuning/nadamw_full_b_lighter.py
-search_space=submissions/lawa_cpu_bf16/lawa.py
+submission=submissions/lawa_cpu_bf16/lawa.py
+search_space=exp/unified/lawa_overhead/json/hparams.json
 exp_name=overhead_lawa_cpu_smart_bfp16_5000_3
 study=1
 num_tuning_trials=1
