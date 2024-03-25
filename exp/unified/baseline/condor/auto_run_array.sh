@@ -36,10 +36,10 @@ if [ "$dataset" = "librispeech" ]; then
     tokenizer_path="${DATA_DIR}/librispeech/spm_model.vocab"
 fi
 
-# Librispeech tokenizer path
-tokenizer_path=''
+# Imagenet is in a different folder on raven
+data_dir_2=$DATA_DIR/$dataset
 if [ "$dataset" = "imagenet" ]; then
-    tokenizer_path="${DATA_DIR}/librispeech/spm_model.vocab"
+    data_dir="/is/cluster/fast/jpiles/imagenet"
 fi
 
 # Execute python script
@@ -52,12 +52,13 @@ torchrun \
   --workload=$workload \
   --framework=pytorch \
   --tuning_ruleset=external \
-  --data_dir=$DATA_DIR/$dataset \
+  --data_dir=$data_dir_2 \
   --imagenet_v2_data_dir=$DATA_DIR/$dataset \
   --librispeech_tokenizer_vocab_path=$tokenizer_path \
   --submission_path=$submission \
   --tuning_search_space=$search_space \
   --num_tuning_trials=$num_tuning_trials \
+  --trial_index=$trial_index \
   --experiment_dir=$EXP_DIR  \
   --experiment_name=$experiment_name \
   --save_intermediate_checkpoints=False \
