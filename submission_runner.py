@@ -404,7 +404,7 @@ def train_once(
         train_state['accumulated_submission_time'] < max_allowed_runtime_sec)
     
     # (nico) log lr
-    if FLAGS.extra_wandb_logging and wandb.run is not None and 'scheduler' in optimizer_state and (global_step % 100 == 0):
+    if FLAGS.extra_wandb_logging and wandb.run is not None and 'scheduler' in optimizer_state:
       wandb.log({
           'my_step': global_step,
           'lr': optimizer_state['scheduler'].get_last_lr()[0]})
@@ -678,13 +678,12 @@ def score_submission_on_workload(workload: spec.Workload,
                                      tuning_dir_name,
                                      save_checkpoints=save_checkpoints,)
       # (nico): modified
-      if FLAGS.fixed_space:
-        all_timings.append(timing)
-        all_metrics.append(metrics)
-      else: # (nico): original
-        all_timings[hi] = timing
-        all_metrics[hi] = metrics
-      
+      all_timings.append(timing)
+      all_metrics.append(metrics)
+      # # (nico): original
+      # all_timings[hi] = timing
+      # all_metrics[hi] = metrics
+    
       logging.info(f'Tuning trial {hi + 1}/{num_tuning_trials}')
       logging.info(f'Hyperparameters: {tuning_search_space[hi]}')
       logging.info(f'Metrics: {metrics}')

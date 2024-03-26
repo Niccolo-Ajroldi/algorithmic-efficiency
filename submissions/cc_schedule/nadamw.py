@@ -186,37 +186,50 @@ def nadamw(params: List[Tensor],
     param.addcdiv_(exp_avg, denom, value=-step_size)
     exp_avg.sub_(grad, alpha=1 - beta1).div_(beta1)
 
-def make_lr_schedule_fn(alpha, T, lr_min, lr_max, warmup_steps, d1, d2):
-    def f(t, T):
-        return lr_min + 0.5 * (lr_max-lr_min) * (1 + torch.cos(t * math.pi / T))
+def make_lr_schedule(alpha, T, lr_min, lr_max, warmup_steps, d1, d2):
+  
+  def g(t):
+    return 1 + math.cos(t * math.pi / T)
 
-    def decay(t, phi, T, d1):
-        return lr_min + (lr_min - f(phi*alpha*T, T))/d1 * (t - phi*alpha*T - d1)
+  a_1 = 0.5 * (lr_max-lr_min)
+  a_2 = a_1 * g(alpha * T) / g(alpha * T + d1 + d2)
+  a_3 = a_2 * g(2.0 * alpha * T) / g(2.0 * alpha * T + d1 + d2)
+  a_4 = a_3 * g(3.0 * alpha * T) / g(3.0 * alpha * T + d1 + d2)
 
-    def warmup(t, phi, T, d1, d2):
-        return lr_min + (-lr_min + f(phi*alpha*T + d1 + d2, T))/d2 * (t - phi*alpha*T - d1)
+  def a(phi):
+    if phi==1: 
+      return a_1
+    elif phi==2:
+      return a_2
+    elif phi==3:
+      return a_3
+    elif phi==4:
+      return a_4
 
-    def schedule(t):
-        if t <= warmup_steps:
-            return lr_min + (lr_max - lr_min) / warmup_steps * t
+  def f(t, phi):
+    return lr_min + a(phi) * g(t)
 
-        for phi in range(1, 4):
-            phase_start = phi * alpha * T
-            if t <= phase_start:
-                return f(t, T)
-            elif t <= phase_start + d1:
-                return decay(t, phi, T, d1)
-            elif t <= phase_start + d1 + d2:
-                return warmup(t, phi, T, d1, d2)
+  def decay(t, phi):
+    return lr_min + (lr_min - f(phi*alpha*T, phi))/d1 * (t - phi*alpha*T - d1)
 
-        if t <= T:
-            return f(t, T)
-        return lr_min
+  def warmup(t, phi):
+    return lr_min + (-lr_min + f(phi*alpha*T, phi))/d2 * (t - phi*alpha*T - d1)
 
-    def lr_lambda(step):
-        return schedule(step).item() / lr_max
+  def schedule(t):
+    if t<= warmup_steps:
+      return lr_min + lr_max/warmup_steps * t
+    for phi in range(1,4):
+      if t <= phi * alpha * T:
+        return f(t, phi)
+      elif t <= phi * alpha * T + d1:
+        return decay(t, phi)
+      elif t <= phi * alpha * T + + d1 + d2:
+        return warmup(t, phi)  
+    if t <= T:
+      return f(t, 4)
+    return lr_min
 
-    return lr_lambda
+  return schedule
   
 def init_optimizer_state(workload: spec.Workload,
                          model_params: spec.ParameterContainer,
@@ -239,18 +252,23 @@ def init_optimizer_state(workload: spec.Workload,
   }
 
   warmup_steps = workload.step_hint * hyperparameters.warmup_factor
-  d1 = workload.step_hint * hyperparameters.cs_decay_factor
-  d2 = workload.step_hint * hyperparameters.cs_warmup_factor
+  d1 = workload.step_hint * hyperparameters.cc_decay_factor
+  d2 = workload.step_hint * hyperparameters.cc_warmup_factor
 
   # Create learning rate schedule.
-  lr_lambda = make_lr_schedule_fn(
-      alpha = hyperparameters.alpha,
+  schedule = make_lr_schedule(
+      alpha = hyperparameters.cc_alpha,
       T = workload.step_hint,
       lr_min = 1e-10, 
       lr_max = hyperparameters.learning_rate,
       warmup_steps = warmup_steps,
       d1 = d1,
       d2 = d2)
+
+  # PyTorch's LambdaLR expects the lr_lambda fn to return a factor which will
+  # be multiplied with the base lr, so we have to divide by it here.
+  def lr_lambda(step: int) -> float:
+    return schedule(step) / hyperparameters.learning_rate
 
   optimizer_state['scheduler'] = LambdaLR(
     optimizer_state['optimizer'], lr_lambda=lr_lambda)
