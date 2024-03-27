@@ -1,12 +1,13 @@
 #!/bin/bash
 
-chmod +x exp/unified/warm_cos_cycle/slurm/auto_run.sh
-chmod +x ${RUN_1}
-chmod +x ${RUN_2}
-
 RUN_1=exp/unified/warm_cos_cycle/slurm/run_1.sh
 RUN_2=exp/unified/warm_cos_cycle/slurm/run_2.sh
-exp_name="wc_schedule"
+
+chmod +x exp/unified/warm_cos_cycle/slurm/auto_run.sh
+chmod +x exp/unified/warm_cos_cycle/slurm/run_1.sh
+chmod +x exp/unified/warm_cos_cycle/slurm/run_2.sh
+
+exp_name=wc_schedule_01
 
 trial_1=exp/unified/warm_cos_cycle/json/trial_1.json
 trial_2=exp/unified/warm_cos_cycle/json/trial_2.json
