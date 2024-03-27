@@ -16,6 +16,9 @@ conda activate alpe
 
 # Env vars
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
+export CODE_DIR=~/algorithmic-efficiency
+export EXP_DIR=/ptmp/najroldi/exp/algoperf
+export DATA_DIR=/ptmp/najroldi/data
 
 dataset=imagenet
 workload=imagenet_resnet
