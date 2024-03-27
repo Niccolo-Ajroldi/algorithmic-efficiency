@@ -16,7 +16,7 @@ trial_index=$8
 rng_seed=$9
 
 # Experiment name
-experiment_name="${name}"
+experiment_name="${base_name}/study_${study}"
 
 # Librispeech tokenizer path
 tokenizer_path=''
