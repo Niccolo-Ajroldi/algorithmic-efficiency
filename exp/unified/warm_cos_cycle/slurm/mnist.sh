@@ -11,7 +11,7 @@ export DATA_DIR=/ptmp/najroldi/data
 workload=ogbg
 dataset=ogbg
 submission=submissions/warm_cos_cycle/nadamw_warm_cos_cycle.py
-search_space=exp/unified/warm_cos_cycle/json/trial_5_2cycle.json
+search_space=exp/unified/warm_cos_cycle/json/trial_5.json
 trials=1
 name="destiny_check"
 
