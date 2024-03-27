@@ -242,7 +242,6 @@ def update_params(workload: spec.Workload,
   """Return (updated_optimizer_state, updated_params, updated_model_state)."""
   del current_params_types
   del loss_type
-  del eval_results
 
   current_model = current_param_container
   prev_model = optimizer_state['prev_model']
