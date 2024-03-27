@@ -9,7 +9,7 @@ dataset=$1
 workload=$2
 submission=$3
 search_space=$4
-name=$5
+base_name=$5
 study=$6
 num_tuning_trials=$7
 

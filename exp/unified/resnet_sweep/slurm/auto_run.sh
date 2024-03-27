@@ -1,5 +1,9 @@
 #!/bin/bash
 
+CODE_DIR=~/algorithmic-efficiency
+EXP_DIR=/ptmp/deok/exp/algoperf
+DATA_DIR=/ptmp/najroldi/data
+
 # Job specific vars
 dataset=$1
 workload=$2
