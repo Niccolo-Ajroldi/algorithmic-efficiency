@@ -11,7 +11,6 @@
 #SBATCH --cpus-per-task=48
 #SBATCH --mem=500000
 
-source ~/.bashrc
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate alpe
 
