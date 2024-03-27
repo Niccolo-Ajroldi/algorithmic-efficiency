@@ -407,7 +407,8 @@ def train_once(
     if FLAGS.extra_wandb_logging and wandb.run is not None and 'scheduler' in optimizer_state:
       wandb.log({
           'my_step': global_step,
-          'lr': optimizer_state['scheduler'].get_last_lr()[0]})
+          'lr': optimizer_state['scheduler'].schedule(global_step)})
+          # 'lr': optimizer_state['scheduler'].get_last_lr()[0]})
       
     # Check if submission is eligible for an untimed eval.
     if ((train_step_end_time - train_state['last_eval_time'])

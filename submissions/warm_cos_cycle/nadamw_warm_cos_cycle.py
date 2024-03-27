@@ -7,16 +7,12 @@ from absl import logging
 import torch
 from torch import Tensor
 import torch.distributed.nn as dist_nn
-from torch.optim.lr_scheduler import CosineAnnealingLR
-from torch.optim.lr_scheduler import LinearLR
-from torch.optim.lr_scheduler import SequentialLR
 
 from algorithmic_efficiency import spec
 from algorithmic_efficiency.pytorch_utils import pytorch_setup
 
-from .lawa_ema_utils import LAWAEma, ListOfParams
-
 USE_PYTORCH_DDP = pytorch_setup()[0]
+
 
 # Modified from github.com/pytorch/pytorch/blob/v1.12.1/torch/optim/adamw.py.
 class NAdamW(torch.optim.Optimizer):
@@ -189,6 +185,73 @@ def nadamw(params: List[Tensor],
     param.addcdiv_(exp_avg, denom, value=-step_size)
     exp_avg.sub_(grad, alpha=1 - beta1).div_(beta1)
 
+class WarmCosineCycles(object):
+  def __init__(self, optimizer, lr_min, lr_max, warmup_steps, T, cycles):
+    self.optimizer = optimizer
+    self.lr_min = lr_min
+    self.lr_max = lr_max
+    self.warmup_steps = warmup_steps
+    self.T = T
+    self.cycles = cycles
+    self.alpha = 1/cycles
+    self.t = 0
+      
+  def f(self, t, phi):
+    return self.lr_min + 0.5 * (self.lr_max-self.lr_min) * (1 + math.cos((t - self.warmup_steps - phi*self.alpha*self.T) * math.pi / (self.alpha*self.T-self.warmup_steps)))
+
+  def warmup(self, t, phi):
+    return self.lr_min + (self.lr_max-self.lr_min)/self.warmup_steps * (t - phi*self.alpha*self.T) 
+
+  def schedule(self, t):
+    for phi in range(0,self.cycles):
+      if t <= phi * self.alpha * self.T + self.warmup_steps:
+        return self.warmup(t, phi)        
+      elif t <= (phi+1) * self.alpha * self.T:
+        return self.f(t, phi)
+    return self.lr_min
+
+  def step(self):
+    self.t += 1
+    # set LR in optimizer
+    lr = self.schedule(self.t)
+    for group in self.optimizer.param_groups:
+      group["lr"] = lr
+
+  def state_dict(self):
+    return {key: value for key, value in self.__dict__.items() if key != "optimizer"}
+
+  def load_state_dict(self, state_dict):
+    self.__dict__.update(state_dict)
+
+class WarmCosine(object):
+  def __init__(self, optimizer, lr_min, lr_max, warmup_steps, T):
+    self.optimizer = optimizer
+    self.lr_min = lr_min
+    self.lr_max = lr_max
+    self.warmup_steps = warmup_steps
+    self.T = T
+    self.t = 0
+  
+  def schedule(self, t):
+    if t <= self.warmup_steps:
+      return self.lr_min + (self.lr_max-self.lr_min)/self.warmup_steps * t
+    elif t <= self.T:
+      return self.lr_min + 0.5 * (self.lr_max-self.lr_min) * (1 + math.cos((t - self.warmup_steps) * math.pi / (self.T-self.warmup_steps)))
+    return self.lr_min
+
+  def step(self):
+    self.t += 1
+    # set LR in optimizer
+    lr = self.schedule(self.t)
+    for group in self.optimizer.param_groups:
+      group["lr"] = lr
+
+  def state_dict(self):
+    return {key: value for key, value in self.__dict__.items() if key != "optimizer"}
+
+  def load_state_dict(self, state_dict):
+    self.__dict__.update(state_dict)
+
 
 def init_optimizer_state(workload: spec.Workload,
                          model_params: spec.ParameterContainer,
@@ -208,22 +271,27 @@ def init_optimizer_state(workload: spec.Workload,
                      hyperparameters.beta2),
               eps=1e-8,
               weight_decay=hyperparameters.weight_decay),
-      'LAWA_ema': LAWAEma(beta=hyperparameters.lawa_beta),
-      'prev_model': ListOfParams(model_params.parameters()),
-      'return_avg': False
   }
 
-  def pytorch_cosine_warmup(step_hint: int, hyperparameters, optimizer):
-    warmup_steps = int(hyperparameters.warmup_factor * step_hint)
-    warmup = LinearLR(
-        optimizer, start_factor=1e-10, end_factor=1., total_iters=warmup_steps)
-    cosine_steps = max(step_hint - warmup_steps, 1)
-    cosine_decay = CosineAnnealingLR(optimizer, T_max=cosine_steps)
-    return SequentialLR(
-        optimizer, schedulers=[warmup, cosine_decay], milestones=[warmup_steps])
-
-  optimizer_state['scheduler'] = pytorch_cosine_warmup(
-      workload.step_hint, hyperparameters, optimizer_state['optimizer'])
+  warmup_steps = int(hyperparameters.warmup_factor * workload.step_hint)
+  
+  # Notice that WarmCosineCycles(... cycles=1) is supported
+  # however, to speed-up the code we also implement WarmCosine
+  if hyperparameters.cycles == 1:
+    optimizer_state['scheduler'] = WarmCosine(
+        optimizer_state['optimizer'], 
+        lr_min = 1e10, 
+        lr_max = hyperparameters.learning_rate, 
+        warmup_steps = warmup_steps, 
+        T = workload.step_hint)
+  else:
+    optimizer_state['scheduler'] = WarmCosineCycles(
+        optimizer_state['optimizer'], 
+        lr_min = 1e-10, 
+        lr_max = hyperparameters.learning_rate, 
+        warmup_steps = warmup_steps, 
+        T = workload.step_hint,
+        cycles = hyperparameters.cycles)
 
   return optimizer_state
 
@@ -242,23 +310,9 @@ def update_params(workload: spec.Workload,
   """Return (updated_optimizer_state, updated_params, updated_model_state)."""
   del current_params_types
   del loss_type
+  del eval_results
 
   current_model = current_param_container
-  prev_model = optimizer_state['prev_model']
-  lawa_ema = optimizer_state['LAWA_ema']
-  lawa_start_step = math.ceil(workload.step_hint * hyperparameters.lawa_start_factor)
-  lawa_interval = math.ceil(workload.step_hint * hyperparameters.lawa_interval_scaling)
-  
-  # Discard average and load previous params
-  if optimizer_state['return_avg']:
-    for p,p_old in zip(current_model.parameters(), prev_model.parameters()):
-      p.data = p_old.to(p.device).clone(memory_format=torch.preserve_format)
-  
-  # eval just happened -> we stop loading previous model and returning avg
-  if len(eval_results) > 0:
-    if (global_step-1) == eval_results[-1][0]:
-      optimizer_state['return_avg'] = False
-  
   current_model.train()
   optimizer_state['optimizer'].zero_grad()
 
@@ -298,24 +352,8 @@ def update_params(workload: spec.Workload,
         current_model.parameters(), max_norm=grad_clip)
   optimizer_state['optimizer'].step()
   optimizer_state['scheduler'].step()
-  
-  # Save previous parameters
-  if global_step >= lawa_start_step:
-    prev_model.update(current_model.parameters())
-  
-  # Update lawa_ema
-  if global_step >= lawa_start_step and \
-      (global_step-lawa_start_step) % lawa_interval == 0:
-    lawa_ema.push(current_model.parameters())
-    optimizer_state['return_avg'] = True
-  
-  # Load avg into model
-  if optimizer_state['return_avg']:
-    avg = lawa_ema.get_avg()
-    for p, p_avg in zip(current_model.parameters(), avg):
-      p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
-      
-  return (optimizer_state, current_model, new_model_state)
+
+  return (optimizer_state, current_param_container, new_model_state)
 
 
 def get_batch_size(workload_name):
