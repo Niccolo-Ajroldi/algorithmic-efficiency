@@ -3,9 +3,9 @@ LOGS_DIR=/fast/najroldi/logs/algoperf
 EXE=/home/najroldi/algorithmic-efficiency/exp/unified/cc_schedule/condor/auto_run_array.sh
 
 # Job specific vars
-dataset=fastmri
-workload=fastmri
-search_space=exp/unified/cc_schedule/json/trial_4.json
+dataset=wmt
+workload=wmt
+search_space=exp/unified/cc_schedule/json/trial_5.json
 
 # Submission
 # submission=submissions/cc_schedule/nadamw.py
