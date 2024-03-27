@@ -4,7 +4,7 @@
 #SBATCH --array=1
 #SBATCH --error=/ptmp/deok/logs/algoperf/err/%x_%A_%a.err
 #SBATCH --output=/ptmp/deok/logs/algoperf/out/%x_%A_%a.out
-#SBATCH --time=00:15:00
+#SBATCH --time=24:00:00
 #SBATCH --ntasks 1
 #SBATCH --requeue
 #SBATCH --gres=gpu:a100:4
