@@ -4,7 +4,7 @@ source ~/.bashrc
 conda activate alpe
 
 export CODE_DIR=~/algorithmic-efficiency
-export EXP_DIR=/ptmp/najroldi/exp/algoperf
+export EXP_DIR=/ptmp/deok/exp/algoperf
 export DATA_DIR=/ptmp/najroldi/data
 
 # Job specific vars
