@@ -31,7 +31,7 @@ class LAWAEma:
     
     beta = self.beta
     for p_ema, p in zip(self.ema, params):
-      p_ema.mul_(beta).add_(p, alpha=1-beta)
+      p_ema.mul_(beta).add_(p.detach().cpu(), alpha=1-beta)
   
   def get_avg(self):
     return self.ema
