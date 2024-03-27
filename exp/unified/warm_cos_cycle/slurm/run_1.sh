@@ -2,8 +2,8 @@
 
 #SBATCH --job-name=wc_schedule
 #SBATCH --array=1
-#SBATCH --error=/ptmp/najroldi/logs/algoperf/err/%x_%A_%a.err
-#SBATCH --output=/ptmp/najroldi/logs/algoperf/out/%x_%A_%a.out
+#SBATCH --error=/ptmp/deok/logs/algoperf/err/%x_%A_%a.err
+#SBATCH --output=/ptmp/deok/logs/algoperf/out/%x_%A_%a.out
 #SBATCH --time=00:15:00
 #SBATCH --ntasks 1
 #SBATCH --requeue
@@ -17,7 +17,7 @@ conda activate alpe
 # Env vars
 export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK}
 export CODE_DIR=~/algorithmic-efficiency
-export EXP_DIR=/ptmp/najroldi/exp/algoperf
+export EXP_DIR=/ptmp/deok/exp/algoperf
 export DATA_DIR=/ptmp/najroldi/data
 
 dataset=$1
