@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=resnet_sweep
-#SBATCH --array=1-48
+#SBATCH --array=1-32
 #SBATCH --error=/ptmp/deok/logs/algoperf/err/%x_%A_%a.err
 #SBATCH --output=/ptmp/deok/logs/algoperf/out/%x_%A_%a.out
 #SBATCH --time=24:00:00
