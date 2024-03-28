@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=lawa_ema
-#SBATCH --array=1-28
+#SBATCH --array=1-12
 #SBATCH --error=/ptmp/najroldi/logs/algoperf/err/%x_%A_%a.err
 #SBATCH --output=/ptmp/najroldi/logs/algoperf/out/%x_%A_%a.out
 #SBATCH --time=06:00:00
@@ -33,10 +33,10 @@ submission=submissions/lawa_ema_cpu/lawa_ema.py
 search_space=exp/unified/lawa_ema/json/trial_5.json
 
 # Experiment name
-base_name="lawa_ema_11"
+base_name="lawa_ema_12"
 
 # Set config
-experiment_name="${name}"
+experiment_name="${base_name}"
 num_tuning_trials=${SLURM_ARRAY_TASK_MAX}
 trial_index=${SLURM_ARRAY_TASK_ID}
 
