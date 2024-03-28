@@ -106,7 +106,8 @@ class BaseImagenetResNetWorkload(spec.Workload):
 
   @property
   def eval_period_time_sec(self) -> int:
-    return 510  # 8.5 minutes.
+    return 615  # (nico) scaled to 4xA100 TODO: change back!!
+    # return 510  # 8.5 minutes.
 
   def _build_dataset(
       self,

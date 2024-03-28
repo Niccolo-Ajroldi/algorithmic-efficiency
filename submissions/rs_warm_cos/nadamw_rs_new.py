@@ -185,44 +185,6 @@ def nadamw(params: List[Tensor],
     param.addcdiv_(exp_avg, denom, value=-step_size)
     exp_avg.sub_(grad, alpha=1 - beta1).div_(beta1)
 
-class WarmCosineCycles(object):
-  def __init__(self, optimizer, lr_min, lr_max, warmup_steps, T, cycles):
-    self.optimizer = optimizer
-    self.lr_min = lr_min
-    self.lr_max = lr_max
-    self.warmup_steps = warmup_steps
-    self.T = T
-    self.cycles = cycles
-    self.alpha = 1/cycles
-    self.t = 0
-      
-  def f(self, t, phi):
-    return self.lr_min + 0.5 * (self.lr_max-self.lr_min) * (1 + math.cos((t - self.warmup_steps - phi*self.alpha*self.T) * math.pi / (self.alpha*self.T-self.warmup_steps)))
-
-  def warmup(self, t, phi):
-    return self.lr_min + (self.lr_max-self.lr_min)/self.warmup_steps * (t - phi*self.alpha*self.T) 
-
-  def schedule(self, t):
-    for phi in range(0,self.cycles):
-      if t <= phi * self.alpha * self.T + self.warmup_steps:
-        return self.warmup(t, phi)        
-      elif t <= (phi+1) * self.alpha * self.T:
-        return self.f(t, phi)
-    return self.lr_min
-
-  def step(self):
-    self.t += 1
-    # set LR in optimizer
-    lr = self.schedule(self.t)
-    for group in self.optimizer.param_groups:
-      group["lr"] = lr
-
-  def state_dict(self):
-    return {key: value for key, value in self.__dict__.items() if key != "optimizer"}
-
-  def load_state_dict(self, state_dict):
-    self.__dict__.update(state_dict)
-
 class WarmCosine(object):
   def __init__(self, optimizer, lr_min, lr_max, warmup_steps, T):
     self.optimizer = optimizer
@@ -275,23 +237,12 @@ def init_optimizer_state(workload: spec.Workload,
 
   warmup_steps = int(hyperparameters.warmup_factor * workload.step_hint)
   
-  # Notice that WarmCosineCycles(... cycles=1) is supported
-  # however, to speed-up the code we also implement WarmCosine
-  if hyperparameters.cycles == 1:
-    optimizer_state['scheduler'] = WarmCosine(
-        optimizer_state['optimizer'], 
-        lr_min = 1e-10, 
-        lr_max = hyperparameters.learning_rate, 
-        warmup_steps = warmup_steps, 
-        T = workload.step_hint)
-  else:
-    optimizer_state['scheduler'] = WarmCosineCycles(
-        optimizer_state['optimizer'], 
-        lr_min = 1e-10, 
-        lr_max = hyperparameters.learning_rate, 
-        warmup_steps = warmup_steps, 
-        T = workload.step_hint,
-        cycles = hyperparameters.cycles)
+  optimizer_state['scheduler'] = WarmCosine(
+      optimizer_state['optimizer'], 
+      lr_min = 1e-10, 
+      lr_max = hyperparameters.learning_rate, 
+      warmup_steps = warmup_steps, 
+      T = int(0.92*workload.step_hint))
 
   return optimizer_state
 
