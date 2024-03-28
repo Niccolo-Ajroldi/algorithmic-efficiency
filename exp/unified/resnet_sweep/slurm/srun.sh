@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=resnet_sweep
-#SBATCH --array=1-48
+#SBATCH --array=1-72
 #SBATCH --error=/ptmp/deok/logs/algoperf/err/%x_%A_%a.err
 #SBATCH --output=/ptmp/deok/logs/algoperf/out/%x_%A_%a.out
 #SBATCH --time=24:00:00
@@ -22,9 +22,9 @@ export DATA_DIR=/ptmp/najroldi/data
 
 dataset=imagenet
 workload=imagenet_resnet
-submission=prize_qualification_baselines/external_tuning/nadamw_full_b_lighter.py
-search_space=exp/unified/resnet_sweep/json/sweep_2.json
-exp_name=resnet_sweep_2
+submission=submissions/rs_warm_cos/nadamw_rs_new.py
+search_space=exp/unified/resnet_sweep/json/sweep_3.json
+exp_name=resnet_sweep_3
 study=1
 num_tuning_trials=${SLURM_ARRAY_TASK_MAX}
 trial_index=${SLURM_ARRAY_TASK_ID}
