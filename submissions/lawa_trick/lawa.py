@@ -228,7 +228,7 @@ class LAWA():
 
     time_per_step = workload.max_allowed_runtime_sec / workload.step_hint
     steps_per_eval = workload.eval_period_time_sec / time_per_step
-    self.steps_per_call = steps_per_eval #math.ceil(steps_per_eval * 1.00)
+    self.steps_per_call = math.ceil(steps_per_eval * 1.00)
     
   def update_prev(self, params):
     self.prev_params = [p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params]
