@@ -8,13 +8,12 @@ export CUDA_VISIBLE_DEVICES=3
 # export OMP_NUM_THREADS=8
 
 # Job specific vars
-workload=ogbg
-dataset=ogbg
-submission=submissions/lawa_trick/lawa.py
+workload=mnist
+dataset=MNIST
+submission=submissions/lawa_cpu_bf16/lawa.py
 search_space=exp/seal/lawa_trick/space_1.json
 trials=1
 name="lawa_trick_check_1"
-eval_freq=1000
 
 # Execute python script
 # torchrun \
