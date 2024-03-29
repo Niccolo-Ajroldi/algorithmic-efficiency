@@ -219,8 +219,8 @@ class WarmCosine(object):
 class LAWA():
   def __init__(self, hyperparameters, workload) -> None:
     self.prev_params = None
-    self.maxlen = int(hyperparameters.k)
-    self.queue = deque(maxlen=self.maxlen)
+    self.beta = int(hyperparameters.lawa_beta)
+    self.ema = None
     self.local_step = torch.tensor(0.)
     
     self.lawa_start_step = math.ceil(workload.step_hint * hyperparameters.lawa_start_factor)
@@ -233,24 +233,16 @@ class LAWA():
   def update_prev(self, params):
     self.prev_params = [p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params]
 
-  def queue_append(self, params):
-    self.queue.append([p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params])
+  def ema_update(self, params):
+    if self.ema is None:
+      self.ema = [p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params]      
+      return
+    beta = self.beta
+    for p_ema, p in zip(self.ema, params):
+      p_ema.mul_(beta).add_(p.detach().cpu(), alpha=1-beta)
 
-  def queue_full(self):
-    return (len(self.queue)==self.maxlen)
-
-  def queue_avg(self):
-    if not self.queue_full(): # TODO: remove
-      raise Exception("q should be full to compute avg")
-
-    k = float(self.maxlen)
-    q_avg = [torch.zeros_like(p, device='cpu', memory_format=torch.preserve_format) for p in self.queue[0]]
-    
-    for chkpts in self.queue:
-      for p_avg,p in zip(q_avg, chkpts):
-        p_avg.add_(p/k)
-        
-    return q_avg
+  def get_ema(self):
+    return self.ema
   
   def state_dict(self):
     return {key: value for key, value in self.__dict__.items()}
@@ -319,7 +311,7 @@ def update_params(workload: spec.Workload,
   local_step = lawa.local_step
 
   # Discard average and load previous params
-  if local_step > lawa_start_step and lawa.queue_full():
+  if local_step > lawa_start_step:
     for p,p_old in zip(current_model.parameters(), lawa.prev_params):
       p.data = p_old.to(p.device).clone(memory_format=torch.preserve_format)
 
@@ -372,17 +364,17 @@ def update_params(workload: spec.Workload,
     if local_step >= lawa_start_step:
       lawa.update_prev(current_model.parameters())
 
-    # Update queue
+    # Update ema
     if local_step >= lawa_start_step and \
         (local_step-lawa_start_step) % lawa_interval == 0:
-      lawa.queue_append(current_model.parameters())
+      lawa.ema_update(current_model.parameters())
 
     # Update local_step
     local_step.add_(1)
 
   # Load avg into model
-  if lawa.queue_full():
-    avg = lawa.queue_avg()
+  if local_step >= lawa_start_step:
+    avg = lawa.get_ema()
     for p, p_avg in zip(current_model.parameters(), avg):
       p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
 

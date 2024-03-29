@@ -10,7 +10,7 @@
         "warmup_factor": 0.1,
         "lawa_beta": 0.0,
         "lawa_interval": 1,
-        "lawa_start_factor": 1
+        "lawa_start_factor": 0.0
     }
 ]
 

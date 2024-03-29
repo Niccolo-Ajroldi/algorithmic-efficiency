@@ -326,7 +326,7 @@ def update_params(workload: spec.Workload,
   local_step = lawa.local_step
 
   # Discard average and load previous params
-  if optimizer_state['scheduler'].t > lawa_start_step and lawa.queue_full():
+  if local_step > lawa_start_step and lawa.queue_full():
     for p,p_old in zip(current_model.parameters(), lawa.prev_params):
       p.data = p_old.clone(memory_format=torch.preserve_format)
 
