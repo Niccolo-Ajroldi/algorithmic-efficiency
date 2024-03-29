@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CODE_DIR=~/algorithmic-efficiency
-EXP_DIR=/ptmp/deok/exp/algoperf
+EXP_DIR=/ptmp/najroldi/exp/algoperf
 DATA_DIR=/ptmp/najroldi/data
 
 # Job specific vars
@@ -28,7 +28,7 @@ if [ "$dataset" = "librispeech" ]; then
     tokenizer_path="${DATA_DIR}/librispeech/spm_model.vocab"
 fi
 
-# Imagenet is in a different folder on raven
+# Imagenet is in a different folder on mpi
 data_dir_2=$DATA_DIR/$dataset
 # if [ "$dataset" = "imagenet" ]; then
 #     data_dir="/is/cluster/fast/jpiles/imagenet"
