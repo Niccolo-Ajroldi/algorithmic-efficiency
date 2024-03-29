@@ -5,17 +5,17 @@ EXE=/home/najroldi/algorithmic-efficiency/exp/unified/lawa_trick_check_cpu_ram/c
 # Job specific vars
 dataset=criteo1tb
 workload=criteo1tb
-# search_space=exp/unified/lawa_trick_check_cpu_ram/json/trial_5.json
-search_space=exp/unified/lawa_trick_check_cpu_ram/json/trial_5_copy.json
+search_space=exp/unified/lawa_trick_check_cpu_ram/json/trial_5.json
+# search_space=exp/unified/lawa_trick_check_cpu_ram/json/trial_5_copy.json
 
 # Submission
-# submission=submissions/lawa_trick/lawa.py
-submission=submissions/lawa_trick_bf16/lawa.py
-# exp_name=lawa_trick_check
-exp_name=lawa_trick_bf16_check
+submission=submissions/lawa_trick/lawa.py
+# submission=submissions/lawa_trick_bf16/lawa.py
+exp_name=lawa_trick_check_CudaCapability7
+# exp_name=lawa_trick_bf16_check
 study=1
-# num_tuning_trials=2
-num_tuning_trials=1
+num_tuning_trials=2
+# num_tuning_trials=1
 rng_seed=1
 
 # Args
@@ -40,6 +40,6 @@ log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 request_memory = 240000
 request_cpus = 28
 request_gpus = 8
-requirements = (TARGET.CUDADeviceName == "Tesla V100-PCIE-16GB")
+requirements = (TARGET.CUDACapability == 7.0)
 
 queue $(num_tuning_trials)
