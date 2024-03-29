@@ -27,9 +27,9 @@
       "feasible_points": [0.0]
     },
     "lawa_interval_scaling": {
-      "feasible_points": [0.001, 0.002, 0.005, 0.01, 0.02]
+      "feasible_points": [0.002]
     },
     "k": {
-      "feasible_points": [10, 15, 20]
+      "feasible_points": [15]
     }
 }

@@ -85,7 +85,8 @@ class BaseImagenetVitWorkload(BaseImagenetResNetWorkload):
 
   @property
   def eval_period_time_sec(self) -> int:
-    return 7 * 60  # 7 mins.
+    return 12 * 60  # 7 mins. 
+    # return 7 * 60  # 7 mins. # (nico) TODO: REMOVE!!
 
   def _build_dataset(
       self,

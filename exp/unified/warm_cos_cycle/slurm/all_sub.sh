@@ -18,9 +18,9 @@ for study in {1..5}
 do
   # sbatch ${RUN_1} ogbg ogbg ${trial_5} ${study} ${exp_name}
   # sbatch ${RUN_1} fastmri fastmri ${trial_1} ${study} ${exp_name}
-  # sbatch ${RUN_1} imagenet imagenet_vit ${trial_2} ${study} ${exp_name}
+  sbatch ${RUN_1} imagenet imagenet_vit ${trial_2} ${study} ${exp_name}
 
   # sbatch ${RUN_2} wmt wmt ${trial_5_and_1} ${study} ${exp_name}
-  sbatch ${RUN_2} librsipeech librispeech_conformer ${trial_5_and_1} ${study} ${exp_name}
+  # sbatch ${RUN_2} librispeech librispeech_conformer ${trial_5_and_1} ${study} ${exp_name}
   # sbatch ${RUN_2} librispeech librispeech_deepspeech ${trial_5_and_1} ${study} ${exp_name}
 done
