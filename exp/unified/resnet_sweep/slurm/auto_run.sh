@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CODE_DIR=~/algorithmic-efficiency
-EXP_DIR=/ptmp/deok/exp/algoperf
+EXP_DIR=/ptmp/najroldi/exp/algoperf
 DATA_DIR=/ptmp/najroldi/data
 
 # Job specific vars
