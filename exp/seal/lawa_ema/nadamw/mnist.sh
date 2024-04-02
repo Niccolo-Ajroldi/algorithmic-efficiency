@@ -8,7 +8,7 @@ conda activate alpe
 # Job specific vars
 workload=mnist
 dataset=MNIST
-submission=submissions/lawa_cpu_bf16/lawa.py
+submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
 search_space=exp/seal/lawa_ema/nadamw/space_1.json
 trials=1
 name="check_01"

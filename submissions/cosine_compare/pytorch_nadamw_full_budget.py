@@ -3,16 +3,19 @@
 import math
 from typing import Dict, Iterator, List, Tuple
 
-from collections import deque
-
+from absl import logging
 import torch
 from torch import Tensor
 import torch.distributed.nn as dist_nn
+from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.optim.lr_scheduler import LinearLR
+from torch.optim.lr_scheduler import SequentialLR
 
 from algorithmic_efficiency import spec
 from algorithmic_efficiency.pytorch_utils import pytorch_setup
 
 USE_PYTORCH_DDP = pytorch_setup()[0]
+
 
 # Modified from github.com/pytorch/pytorch/blob/v1.12.1/torch/optim/adamw.py.
 class NAdamW(torch.optim.Optimizer):
@@ -199,7 +202,7 @@ class WarmCosine(object):
     if t <= self.warmup_steps:
       return self.lr_min + (self.lr_max-self.lr_min)/self.warmup_steps * t
     elif t <= self.T:
-      return self.lr_min + 0.5 * (self.lr_max-self.lr_min) * (1 + math.cos((t-self.warmup_steps) * math.pi / (self.T-self.warmup_steps)))
+      return self.lr_min + 0.5 * (self.lr_max-self.lr_min) * (1 + math.cos((t - self.warmup_steps) * math.pi / (self.T-self.warmup_steps)))
     return self.lr_min
 
   def step(self):
@@ -215,46 +218,6 @@ class WarmCosine(object):
   def load_state_dict(self, state_dict):
     self.__dict__.update(state_dict)
 
-
-class LAWA():
-  def __init__(self, hyperparameters, workload) -> None:
-    self.prev_params = None
-    self.maxlen = int(hyperparameters.k)
-    self.queue = deque(maxlen=self.maxlen)
-    self.local_step = torch.tensor(0.)
-
-    self.lawa_start_step = math.ceil(workload.step_hint * hyperparameters.lawa_start_factor)
-    self.lawa_interval = math.ceil(workload.step_hint * hyperparameters.lawa_interval_scaling)
-
-    time_per_step = workload.max_allowed_runtime_sec / workload.step_hint
-    steps_per_eval = workload.eval_period_time_sec / time_per_step
-
-    self.steps_per_call = math.ceil(steps_per_eval) # number of steps in inner loop
-
-  def update_prev(self, params):
-    self.prev_params = [p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params]
-
-  def queue_append(self, params):
-    self.queue.append([p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params])
-
-  def queue_full(self):
-    return (len(self.queue)==self.maxlen)
-
-  def queue_avg(self):
-    k = float(self.maxlen)
-    q_avg = [torch.zeros_like(p, device='cpu', memory_format=torch.preserve_format) for p in self.queue[0]]
-
-    for chkpts in self.queue:
-      for p_avg,p in zip(q_avg, chkpts):
-        p_avg.add_(p/k)
-
-    return q_avg
-  
-  def state_dict(self):
-    return {key: value for key, value in self.__dict__.items()}
-  
-  def load_state_dict(self, state_dict):
-    self.__dict__.update(state_dict)
 
 
 def init_optimizer_state(workload: spec.Workload,
@@ -275,7 +238,6 @@ def init_optimizer_state(workload: spec.Workload,
                      hyperparameters.beta2),
               eps=1e-8,
               weight_decay=hyperparameters.weight_decay),
-      'lawa': LAWA(hyperparameters, workload),
   }
 
   optimizer_state['scheduler'] = WarmCosine(
@@ -284,7 +246,7 @@ def init_optimizer_state(workload: spec.Workload,
       lr_max = hyperparameters.learning_rate, 
       warmup_steps = int(hyperparameters.warmup_factor * workload.step_hint), 
       T = workload.step_hint)
-
+  
   return optimizer_state
 
 
@@ -303,81 +265,66 @@ def update_params(workload: spec.Workload,
   del current_params_types
   del loss_type
   del eval_results
-  del global_step
 
   current_model = current_param_container
-  lawa = optimizer_state['lawa']
+  current_model.train()
+  optimizer_state['optimizer'].zero_grad()
 
-  # Lawa hyperparams
-  lawa_start_step = lawa.lawa_start_step
-  lawa_interval = lawa.lawa_interval
-  steps_per_call = lawa.steps_per_call
-  
-  # Actual optimization step
-  local_step = lawa.local_step
+  logits_batch, new_model_state = workload.model_fn(
+      params=current_model,
+      augmented_and_preprocessed_input_batch=batch,
+      model_state=model_state,
+      mode=spec.ForwardPassMode.TRAIN,
+      rng=rng,
+      update_batch_norm=True)
 
-  # Discard average and load previous params
-  if local_step > lawa_start_step and lawa.queue_full():
-    for p,p_old in zip(current_model.parameters(), lawa.prev_params):
-      p.data = p_old.to(p.device).clone(memory_format=torch.preserve_format)
+  label_smoothing = (
+      hyperparameters.label_smoothing if hasattr(hyperparameters,
+                                                 'label_smoothing') else 0.0)
+  if hasattr(hyperparameters, 'grad_clip'):
+    grad_clip = hyperparameters.grad_clip
+  else:
+    grad_clip = None
 
-  # Internal loop
-  for _ in range(steps_per_call):
+  loss_dict = workload.loss_fn(
+      label_batch=batch['targets'],
+      logits_batch=logits_batch,
+      mask_batch=batch.get('weights'),
+      label_smoothing=label_smoothing)
+  summed_loss = loss_dict['summed']
+  n_valid_examples = loss_dict['n_valid_examples']
+  if USE_PYTORCH_DDP:
+    # Use dist_nn.all_reduce to ensure correct loss and gradient scaling.
+    summed_loss = dist_nn.all_reduce(summed_loss)
+    n_valid_examples = dist_nn.all_reduce(n_valid_examples)
+  loss = summed_loss / n_valid_examples
 
-    current_model.train()
-    optimizer_state['optimizer'].zero_grad()
+  loss.backward()
 
-    batch_i = next(batch)
+  if grad_clip is not None:
+    torch.nn.utils.clip_grad_norm_(
+        current_model.parameters(), max_norm=grad_clip)
+  optimizer_state['optimizer'].step()
+  optimizer_state['scheduler'].step()
 
-    logits_batch, new_model_state = workload.model_fn(
-        params=current_model,
-        augmented_and_preprocessed_input_batch=batch_i,
-        model_state=model_state,
-        mode=spec.ForwardPassMode.TRAIN,
-        rng=rng,
-        update_batch_norm=True)
+  # Log training metrics - loss, grad_norm, batch_size.
+  if global_step <= 100 or global_step % 500 == 0:
+    with torch.no_grad():
+      parameters = [p for p in current_model.parameters() if p.grad is not None]
+      grad_norm = torch.norm(
+          torch.stack([torch.norm(p.grad.detach(), 2) for p in parameters]), 2)
+    if workload.metrics_logger is not None:
+      workload.metrics_logger.append_scalar_metrics(
+          {
+              'loss': loss.item(),
+              'grad_norm': grad_norm.item(),
+          }, global_step)
+    logging.info('%d) loss = %0.3f, grad_norm = %0.3f',
+                 global_step,
+                 loss.item(),
+                 grad_norm.item())
 
-    label_smoothing = (
-        hyperparameters.label_smoothing if hasattr(hyperparameters,
-                                                  'label_smoothing') else 0.0)
-
-    loss_dict = workload.loss_fn(
-        label_batch=batch_i['targets'],
-        logits_batch=logits_batch,
-        mask_batch=batch_i.get('weights'),
-        label_smoothing=label_smoothing)
-    summed_loss = loss_dict['summed']
-    n_valid_examples = loss_dict['n_valid_examples']
-    if USE_PYTORCH_DDP:
-      # Use dist_nn.all_reduce to ensure correct loss and gradient scaling.
-      summed_loss = dist_nn.all_reduce(summed_loss)
-      n_valid_examples = dist_nn.all_reduce(n_valid_examples)
-    loss = summed_loss / n_valid_examples
-
-    loss.backward()
-
-    optimizer_state['optimizer'].step()
-    optimizer_state['scheduler'].step()
-
-    # Update queue
-    if local_step >= lawa_start_step and \
-        (local_step-lawa_start_step) % lawa_interval == 0:
-      lawa.queue_append(current_model.parameters())
-
-    # Update local_step
-    local_step.add_(1)
-
-  # Save previous parameters
-  if local_step >= lawa_start_step:
-    lawa.update_prev(current_model.parameters())
-
-  # Load avg into model
-  if lawa.queue_full():
-    avg = lawa.queue_avg()
-    for p, p_avg in zip(current_model.parameters(), avg):
-      p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
-
-  return (optimizer_state, current_model, new_model_state)
+  return (optimizer_state, current_param_container, new_model_state)
 
 
 def get_batch_size(workload_name):
@@ -387,9 +334,9 @@ def get_batch_size(workload_name):
   elif workload_name == 'fastmri':
     return 32
   elif workload_name == 'imagenet_resnet':
-    return 512
+    return 1024
   elif workload_name == 'imagenet_vit':
-    return 512
+    return 1024
   elif workload_name == 'librispeech_conformer':
     return 256
   elif workload_name == 'librispeech_deepspeech':
@@ -422,6 +369,5 @@ def data_selection(workload: spec.Workload,
   del hyperparameters
   del global_step
   del rng
-  # do not return a batch here,
-  # instead draw the batch inside the inner loop directly
-  return input_queue
+  batch = next(input_queue)
+  return batch
