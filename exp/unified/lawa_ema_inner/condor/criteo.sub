@@ -1,19 +1,18 @@
 # Define variables
 LOGS_DIR=/fast/najroldi/logs/algoperf
-EXE=/home/najroldi/algorithmic-efficiency/exp/unified/lawa_bf16/condor/auto_run_array.sh
+EXE=/home/najroldi/algorithmic-efficiency/exp/unified/lawa_ema_inner/condor/auto_run_array.sh
 
 # Job specific vars
-dataset=ogbg
-workload=ogbg
-search_space=exp/unified/lawa_bf16/json/trial_5_nadamw.json
+dataset=criteo1tb
+workload=criteo1tb
+search_space=exp/unified/lawa_ema_inner/json/trial_5.json
 
 # Submission
-submission=prize_qualification_baselines/external_tuning/nadamw_full_b_lighter.py
-exp_name=lw_bf16_nadamw_1
+submission=submissions/lawa_ema_trick/lawa.py
+exp_name=sub_lawaema_01
 study=1
-num_tuning_trials=1
+num_tuning_trials=9
 rng_seed=1
-max_global_steps=80000
 
 # Args
 executable = $(EXE)
@@ -26,8 +25,7 @@ arguments = \
   $(study) \
   $(num_tuning_trials) \
   $(Process) \
-  $(rng_seed) \
-  $(max_global_steps)
+  $(rng_seed)
 
 # Logs
 error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err

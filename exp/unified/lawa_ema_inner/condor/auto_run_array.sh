@@ -69,5 +69,4 @@ torchrun \
   --resume_last_run \
   --use_wandb \
   --rng_seed=$rng_seed \
-  --fixed_space \
-  --max_global_steps=$max_global_steps
+  --fixed_space

@@ -23,13 +23,13 @@
     "warmup_factor": {
       "feasible_points": [0.05]
     },
-    "cc_alpha": {
-      "feasible_points": [0.25]
+    "lawa_start_factor": {
+      "feasible_points": [0.05]
     },
-    "cc_decay_factor": {
-      "feasible_points": [0.02]
+    "lawa_interval_scaling": {
+      "feasible_points": [0.002, 0.005, 0.01]
     },
-    "cc_warmup_factor": {
-      "feasible_points": [0.01]
+    "lawa_beta": {
+      "feasible_points": [0.2, 0.5, 0.8]
     }
 }

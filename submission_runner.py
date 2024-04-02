@@ -355,14 +355,14 @@ def train_once(
       train_state['validation_goal_reached'] and
       train_state['test_goal_reached'])
   
-  # original:
-  # while train_state['is_time_remaining'] and \
+  
+  # # (nico): stop when step == step_hint
+  reached_step_hint = False
+  # while not reached_step_hint and \
   #     not goals_reached and \
   #     not train_state['training_complete']:
-  
-  # (nico): stop when step == step_hint
-  reached_step_hint = False
-  while not reached_step_hint and \
+  # original:
+  while train_state['is_time_remaining'] and \
       not goals_reached and \
       not train_state['training_complete']:
 
