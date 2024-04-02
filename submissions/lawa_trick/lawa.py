@@ -389,7 +389,7 @@ def get_batch_size(workload_name):
   elif workload_name == 'imagenet_resnet':
     return 512
   elif workload_name == 'imagenet_vit':
-    return 512
+    return 1024
   elif workload_name == 'librispeech_conformer':
     return 256
   elif workload_name == 'librispeech_deepspeech':

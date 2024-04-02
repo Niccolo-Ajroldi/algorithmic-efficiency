@@ -3,7 +3,6 @@
 import math
 from typing import Dict, Iterator, List, Tuple
 
-from absl import logging
 import torch
 from torch import Tensor
 import torch.distributed.nn as dist_nn
@@ -185,7 +184,12 @@ def nadamw(params: List[Tensor],
     param.addcdiv_(exp_avg, denom, value=-step_size)
     exp_avg.sub_(grad, alpha=1 - beta1).div_(beta1)
 
+
 class WarmCosineCycles(object):
+  """
+    Implements cyclic cosine schedule with linear warmup.
+  """
+
   def __init__(self, optimizer, lr_min, lr_max, warmup_steps, T, cycles):
     self.optimizer = optimizer
     self.lr_min = lr_min
@@ -195,15 +199,25 @@ class WarmCosineCycles(object):
     self.cycles = cycles
     self.alpha = 1/cycles
     self.t = 0
-      
+
   def f(self, t, phi):
+    """
+    Wrapper for cosine function, phi determines the cycle index.
+
+    Parameters:
+        t (int): Current global step.
+        phi (int): Current cycle index.
+    Returns:
+        float: The learning rate based on the cosine annealing function.
+    """
     return self.lr_min + 0.5 * (self.lr_max-self.lr_min) * (1 + math.cos((t - self.warmup_steps - phi*self.alpha*self.T) * math.pi / (self.alpha*self.T-self.warmup_steps)))
 
   def warmup(self, t, phi):
     return self.lr_min + (self.lr_max-self.lr_min)/self.warmup_steps * (t - phi*self.alpha*self.T) 
 
   def schedule(self, t):
-    for phi in range(0,self.cycles):
+    # Combine cosine cycles + linear warmup
+    for phi in range(0, self.cycles):
       if t <= phi * self.alpha * self.T + self.warmup_steps:
         return self.warmup(t, phi)        
       elif t <= (phi+1) * self.alpha * self.T:
@@ -223,7 +237,12 @@ class WarmCosineCycles(object):
   def load_state_dict(self, state_dict):
     self.__dict__.update(state_dict)
 
+
 class WarmCosine(object):
+  """
+    Implements cosine schedule with linear warmup.
+  """
+  
   def __init__(self, optimizer, lr_min, lr_max, warmup_steps, T):
     self.optimizer = optimizer
     self.lr_min = lr_min
@@ -276,7 +295,8 @@ def init_optimizer_state(workload: spec.Workload,
   warmup_steps = int(hyperparameters.warmup_factor * workload.step_hint)
   
   # Notice that WarmCosineCycles(... cycles=1) is supported
-  # however, to speed-up the code we also implement WarmCosine
+  # however, to speed-up computation we also implement WarmCosine,
+  # and use the latter when cycles=1
   if hyperparameters.cycles == 1:
     optimizer_state['scheduler'] = WarmCosine(
         optimizer_state['optimizer'], 
@@ -327,10 +347,6 @@ def update_params(workload: spec.Workload,
   label_smoothing = (
       hyperparameters.label_smoothing if hasattr(hyperparameters,
                                                  'label_smoothing') else 0.0)
-  if hasattr(hyperparameters, 'grad_clip'):
-    grad_clip = hyperparameters.grad_clip
-  else:
-    grad_clip = None
 
   loss_dict = workload.loss_fn(
       label_batch=batch['targets'],
@@ -347,9 +363,6 @@ def update_params(workload: spec.Workload,
 
   loss.backward()
 
-  if grad_clip is not None:
-    torch.nn.utils.clip_grad_norm_(
-        current_model.parameters(), max_norm=grad_clip)
   optimizer_state['optimizer'].step()
   optimizer_state['scheduler'].step()
 
@@ -363,7 +376,7 @@ def get_batch_size(workload_name):
   elif workload_name == 'fastmri':
     return 32
   elif workload_name == 'imagenet_resnet':
-    return 1024
+    return 512
   elif workload_name == 'imagenet_vit':
     return 1024
   elif workload_name == 'librispeech_conformer':
