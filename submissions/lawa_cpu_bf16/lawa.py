@@ -3,6 +3,8 @@
 import math
 from typing import Dict, Iterator, List, Tuple
 
+from collections import deque
+
 from absl import logging
 import torch
 from torch import Tensor
@@ -14,10 +16,6 @@ from torch.optim.lr_scheduler import SequentialLR
 from algorithmic_efficiency import spec
 from algorithmic_efficiency.pytorch_utils import pytorch_setup
 
-from .lawa_utils import LAWAQueue, ListOfParams
-
-import wandb
-
 def mynorm(params):
   return torch.norm(torch.stack([torch.norm(p.detach().clone(memory_format=torch.preserve_format), 2) for p in params]), 2)
 
@@ -25,7 +23,7 @@ def mynorm(params):
 USE_PYTORCH_DDP = pytorch_setup()[0]
 
 # Modified from github.com/pytorch/pytorch/blob/v1.12.1/torch/optim/adamw.py.
-class NAdamW(torch.optim.Optimizer):
+class NAdamW_16_32(torch.optim.Optimizer):
   r"""Implements NAdamW algorithm.
 
     See Table 1 in https://arxiv.org/abs/1910.05446 for the implementation of
@@ -108,7 +106,7 @@ class NAdamW(torch.optim.Optimizer):
         params_with_grad.append(p)
         if p.grad.is_sparse:
           raise RuntimeError('NAdamW does not support sparse gradients')
-        grads.append(p.grad.data.to(torch.bfloat16)) # (nico): bf16
+        grads.append(p.grad)
 
         state = self.state[p]
 
@@ -128,7 +126,7 @@ class NAdamW(torch.optim.Optimizer):
         exp_avg_sqs.append(state['exp_avg_sq'])
         state_steps.append(state['step'])
 
-      nadamw(
+      nadamw_16_32(
           params_with_grad,
           grads,
           exp_avgs,
@@ -143,7 +141,7 @@ class NAdamW(torch.optim.Optimizer):
     return loss
 
 
-def nadamw(params: List[Tensor],
+def nadamw_16_32(params: List[Tensor],
            grads: List[Tensor],
            exp_avgs: List[Tensor],
            exp_avg_sqs: List[Tensor],
@@ -162,11 +160,13 @@ def nadamw(params: List[Tensor],
         'API has changed, `state_steps` argument must contain a list of' +
         ' singleton tensors')
 
-  for i, param in enumerate(params):
-    grad = grads[i]
-    exp_avg = exp_avgs[i]
-    exp_avg_sq = exp_avg_sqs[i]
+  for i, param in enumerate(params): # f32
+    grad = grads[i] # bf16
+    exp_avg = exp_avgs[i] # bf16
+    exp_avg_sq = exp_avg_sqs[i] # bf16
     step_t = state_steps[i]
+    
+    grad = grad.to(torch.bfloat16)
 
     # Update step.
     step_t += 1
@@ -177,6 +177,10 @@ def nadamw(params: List[Tensor],
     # Decay the first and second moment running average coefficient.
     exp_avg.mul_(beta1).add_(grad, alpha=1 - beta1)
     exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1 - beta2)
+
+    # TODO: remove
+    assert exp_avg.dtype == torch.bfloat16, "exp_avg must be of type torch.bfloat16"
+    assert exp_avg_sq.dtype == torch.bfloat16, "exp_avg_sq must be of type torch.bfloat16"
 
     # Only difference between NAdamW and AdamW in this implementation.
     # The official PyTorch implementation of NAdam uses a different algorithm.
@@ -190,16 +194,53 @@ def nadamw(params: List[Tensor],
     bias_correction2 = 1 - beta2**step
 
     step_size = lr / bias_correction1
-
-    # EMA copy in fp32
-    exp_avg_f32 = exp_avg.to(torch.float32)
-    exp_avg_sq_f32 = exp_avg_sq.to(torch.float32)
     
     bias_correction2_sqrt = math.sqrt(bias_correction2)
-    denom_f32 = (exp_avg_sq_f32.sqrt() / bias_correction2_sqrt).add_(eps)
+    denom = (exp_avg_sq.sqrt() / bias_correction2_sqrt).add_(eps)
     
-    param.addcdiv_(exp_avg_f32, denom_f32, value=-step_size)
+    param.addcdiv_(exp_avg, denom, value=-step_size)
     exp_avg.sub_(grad, alpha=1 - beta1).div_(beta1)
+
+
+class LAWA():
+  def __init__(self, hyperparameters, workload) -> None:
+    self.prev_params = None
+    self.maxlen = int(hyperparameters.k)
+    self.queue = deque(maxlen=self.maxlen)
+    self.local_step = torch.tensor(0.)
+    self.return_avg = False
+    
+    self.lawa_start_step = math.ceil(workload.step_hint * hyperparameters.lawa_start_factor)
+    self.lawa_interval = math.ceil(workload.step_hint * hyperparameters.lawa_interval_scaling)
+    
+  def update_prev(self, params):
+    self.prev_params = [p.detach().clone(memory_format=torch.preserve_format).to(torch.bfloat16) for p in params]
+
+  def queue_append(self, params):
+    self.queue.append([p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params])
+
+  def queue_full(self):
+    return (len(self.queue)==self.maxlen)
+
+  def update_avg(self):
+    if not self.queue_full(): # TODO: remove
+      raise Exception("q should be full to compute avg")
+
+    k = float(self.maxlen)
+    self.q_avg = [torch.zeros_like(p, device='cpu', memory_format=torch.preserve_format) for p in self.queue[0]]
+    
+    for chkpts in self.queue:
+      for p_avg,p in zip(self.q_avg, chkpts):
+        p_avg.add_(p/k)
+  
+  def get_avg(self):
+    return self.q_avg
+
+  def state_dict(self):
+    return {key: value for key, value in self.__dict__.items()}
+  
+  def load_state_dict(self, state_dict):
+    self.__dict__.update(state_dict)
 
 
 def init_optimizer_state(workload: spec.Workload,
@@ -213,16 +254,17 @@ def init_optimizer_state(workload: spec.Workload,
 
   optimizer_state = {
       'optimizer':
-          NAdamW(
+          NAdamW_16_32(
               model_params.parameters(),
               lr=hyperparameters.learning_rate,
               betas=(1.0 - hyperparameters.one_minus_beta1,
                      hyperparameters.beta2),
               eps=1e-8,
               weight_decay=hyperparameters.weight_decay),
-      'queue': LAWAQueue(maxlen=hyperparameters.k),
-      'prev_model': ListOfParams(model_params.parameters()),
-      'return_avg': False
+      # 'queue': LAWAQueue(maxlen=hyperparameters.k),
+      # 'prev_model': ListOfParams(model_params.parameters()),
+      'lawa': LAWA(hyperparameters, workload),
+      # 'return_avg': False
   }
 
   def pytorch_cosine_warmup(step_hint: int, hyperparameters, optimizer):
@@ -256,20 +298,21 @@ def update_params(workload: spec.Workload,
   del loss_type
 
   current_model = current_param_container
-  prev_model = optimizer_state['prev_model']
-  queue = optimizer_state['queue']
-  lawa_start_step = math.ceil(workload.step_hint * hyperparameters.lawa_start_factor)
-  lawa_interval = math.ceil(workload.step_hint * hyperparameters.lawa_interval_scaling)
+  lawa = optimizer_state['lawa']
+
+  # lawa hyperparams
+  lawa_start_step = lawa.lawa_start_step
+  lawa_interval = lawa.lawa_interval
 
   # Discard average and load previous params
-  if optimizer_state['return_avg']:
-    for p,p_old in zip(current_model.parameters(), prev_model.parameters()):
-      p.data = p_old.clone(memory_format=torch.preserve_format)
+  if lawa.return_avg:
+    for p,p_old in zip(current_model.parameters(), lawa.prev_params):
+      p.data = p_old.clone(memory_format=torch.preserve_format).to(torch.float32)
     
   # eval just happened -> we stop loading previous model and returning avg
   if len(eval_results) > 0:
     if (global_step-1) == eval_results[-1][0]:
-      optimizer_state['return_avg'] = False
+      lawa.return_avg = False
     
   current_model.train()
   optimizer_state['optimizer'].zero_grad()
@@ -313,19 +356,19 @@ def update_params(workload: spec.Workload,
   
   # Save previous parameters
   if global_step >= lawa_start_step:
-    prev_model.update(current_model.parameters())
+    lawa.update_prev(current_model.parameters())
   
   # Update queue and avg
   if global_step >= lawa_start_step and \
       (global_step-lawa_start_step) % lawa_interval == 0:
-    queue.push(current_model.parameters())
-    if queue.full():
-      queue.update_avg()
-      optimizer_state['return_avg'] = True
+    lawa.queue_append(current_model.parameters())
+    if lawa.queue_full():
+      lawa.update_avg()
+      lawa.return_avg = True
   
   # Load avg into model
-  if optimizer_state['return_avg']:
-    avg = queue.get_avg()
+  if lawa.return_avg:
+    avg = lawa.get_avg()
     for p, p_avg in zip(current_model.parameters(), avg):
       assert p.data.shape == p_avg.shape, "LAWA Shape mismatch"
       p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
@@ -334,6 +377,7 @@ def update_params(workload: spec.Workload,
 
 
 def get_batch_size(workload_name):
+  
   # Return the global batch size.
   if workload_name == 'criteo1tb':
     return 262_144

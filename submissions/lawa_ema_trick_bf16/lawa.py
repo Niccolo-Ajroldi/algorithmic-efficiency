@@ -15,7 +15,7 @@ from algorithmic_efficiency.pytorch_utils import pytorch_setup
 USE_PYTORCH_DDP = pytorch_setup()[0]
 
 # Modified from github.com/pytorch/pytorch/blob/v1.12.1/torch/optim/adamw.py.
-class NAdamW(torch.optim.Optimizer):
+class NAdamW_16_32(torch.optim.Optimizer):
   r"""Implements NAdamW algorithm.
 
     See Table 1 in https://arxiv.org/abs/1910.05446 for the implementation of
@@ -98,7 +98,7 @@ class NAdamW(torch.optim.Optimizer):
         params_with_grad.append(p)
         if p.grad.is_sparse:
           raise RuntimeError('NAdamW does not support sparse gradients')
-        grads.append(p.grad.data.to(torch.bfloat16)) # (nico): bf16
+        grads.append(p.grad)
 
         state = self.state[p]
 
@@ -118,7 +118,7 @@ class NAdamW(torch.optim.Optimizer):
         exp_avg_sqs.append(state['exp_avg_sq'])
         state_steps.append(state['step'])
 
-      nadamw(
+      nadamw_16_32(
           params_with_grad,
           grads,
           exp_avgs,
@@ -133,7 +133,7 @@ class NAdamW(torch.optim.Optimizer):
     return loss
 
 
-def nadamw(params: List[Tensor],
+def nadamw_16_32(params: List[Tensor],
            grads: List[Tensor],
            exp_avgs: List[Tensor],
            exp_avg_sqs: List[Tensor],
@@ -152,10 +152,10 @@ def nadamw(params: List[Tensor],
         'API has changed, `state_steps` argument must contain a list of' +
         ' singleton tensors')
 
-  for i, param in enumerate(params):
-    grad = grads[i]
-    exp_avg = exp_avgs[i]
-    exp_avg_sq = exp_avg_sqs[i]
+  for i, param in enumerate(params): # f32
+    grad = grads[i] # bf16
+    exp_avg = exp_avgs[i] # bf16
+    exp_avg_sq = exp_avg_sqs[i] # bf16
     step_t = state_steps[i]
 
     # Update step.
@@ -167,6 +167,10 @@ def nadamw(params: List[Tensor],
     # Decay the first and second moment running average coefficient.
     exp_avg.mul_(beta1).add_(grad, alpha=1 - beta1)
     exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1 - beta2)
+
+    # TODO: remove
+    assert exp_avg.dtype == torch.bfloat16, "exp_avg must be of type torch.bfloat16"
+    assert exp_avg_sq.dtype == torch.bfloat16, "exp_avg_sq must be of type torch.bfloat16"
 
     # Only difference between NAdamW and AdamW in this implementation.
     # The official PyTorch implementation of NAdam uses a different algorithm.
@@ -180,15 +184,11 @@ def nadamw(params: List[Tensor],
     bias_correction2 = 1 - beta2**step
 
     step_size = lr / bias_correction1
-
-    # EMA copy in fp32
-    exp_avg_f32 = exp_avg.to(torch.float32)
-    exp_avg_sq_f32 = exp_avg_sq.to(torch.float32)
     
     bias_correction2_sqrt = math.sqrt(bias_correction2)
-    denom_f32 = (exp_avg_sq_f32.sqrt() / bias_correction2_sqrt).add_(eps)
+    denom = (exp_avg_sq.sqrt() / bias_correction2_sqrt).add_(eps)
     
-    param.addcdiv_(exp_avg_f32, denom_f32, value=-step_size)
+    param.addcdiv_(exp_avg, denom, value=-step_size)
     exp_avg.sub_(grad, alpha=1 - beta1).div_(beta1)
 
 
@@ -237,7 +237,7 @@ class LAWA():
     self.steps_per_call = math.ceil(steps_per_eval * 1.00)
     
   def update_prev(self, params):
-    self.prev_params = [p.detach().clone(memory_format=torch.preserve_format) for p in params]
+    self.prev_params = [p.detach().clone(memory_format=torch.preserve_format).to(torch.bfloat16) for p in params]
 
   def ema_update(self, params):
     if self.ema is None:
@@ -268,7 +268,7 @@ def init_optimizer_state(workload: spec.Workload,
 
   optimizer_state = {
       'optimizer':
-          NAdamW(
+          NAdamW_16_32(
               model_params.parameters(),
               lr=hyperparameters.learning_rate,
               betas=(1.0 - hyperparameters.one_minus_beta1,
@@ -319,7 +319,7 @@ def update_params(workload: spec.Workload,
   # Discard average and load previous params
   if local_step > lawa_start_step:
     for p,p_old in zip(current_model.parameters(), lawa.prev_params):
-      p.data = p_old.clone(memory_format=torch.preserve_format)
+      p.data = p_old.clone(memory_format=torch.preserve_format).to(torch.float32)
 
   # internal loop
   for _ in range(steps_per_call):
@@ -382,7 +382,8 @@ def update_params(workload: spec.Workload,
   if local_step >= lawa_start_step:
     avg = lawa.get_ema()
     for p, p_avg in zip(current_model.parameters(), avg):
-      p.data = p_avg.clone(memory_format=torch.preserve_format)
+      p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
+      
 
   return (optimizer_state, current_model, new_model_state)
 

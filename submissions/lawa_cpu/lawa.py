@@ -3,6 +3,8 @@
 import math
 from typing import Dict, Iterator, List, Tuple
 
+from collections import deque
+
 from absl import logging
 import torch
 from torch import Tensor
@@ -190,6 +192,48 @@ def nadamw(params: List[Tensor],
     exp_avg.sub_(grad, alpha=1 - beta1).div_(beta1)
 
 
+class LAWA():
+  def __init__(self, hyperparameters, workload) -> None:
+    self.prev_params = None
+    self.maxlen = int(hyperparameters.k)
+    self.queue = deque(maxlen=self.maxlen)
+    self.local_step = torch.tensor(0.)
+    self.return_avg = False
+    
+    self.lawa_start_step = math.ceil(workload.step_hint * hyperparameters.lawa_start_factor)
+    self.lawa_interval = math.ceil(workload.step_hint * hyperparameters.lawa_interval_scaling)
+    
+  def update_prev(self, params):
+    self.prev_params = [p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params]
+
+  def queue_append(self, params):
+    self.queue.append([p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params])
+
+  def queue_full(self):
+    return (len(self.queue)==self.maxlen)
+
+  def update_avg(self):
+    if not self.queue_full(): # TODO: remove
+      raise Exception("q should be full to compute avg")
+
+    k = float(self.maxlen)
+    self.q_avg = [torch.zeros_like(p, device='cpu', memory_format=torch.preserve_format) for p in self.queue[0]]
+    
+    for chkpts in self.queue:
+      for p_avg,p in zip(self.q_avg, chkpts):
+        p_avg.add_(p/k)
+  
+  def get_avg(self):
+    return self.q_avg
+
+  def state_dict(self):
+    return {key: value for key, value in self.__dict__.items()}
+  
+  def load_state_dict(self, state_dict):
+    self.__dict__.update(state_dict)
+
+
+
 def init_optimizer_state(workload: spec.Workload,
                          model_params: spec.ParameterContainer,
                          model_state: spec.ModelAuxiliaryState,
@@ -208,9 +252,10 @@ def init_optimizer_state(workload: spec.Workload,
                      hyperparameters.beta2),
               eps=1e-8,
               weight_decay=hyperparameters.weight_decay),
-      'queue': LAWAQueue(maxlen=hyperparameters.k),
-      'prev_model': ListOfParams(model_params.parameters()),
-      'return_avg': False
+      # 'queue': LAWAQueue(maxlen=hyperparameters.k),
+      # 'prev_model': ListOfParams(model_params.parameters()),
+      # 'return_avg': False
+      'lawa': LAWA(hyperparameters, workload),
   }
 
   def pytorch_cosine_warmup(step_hint: int, hyperparameters, optimizer):
@@ -244,20 +289,21 @@ def update_params(workload: spec.Workload,
   del loss_type
 
   current_model = current_param_container
-  prev_model = optimizer_state['prev_model']
-  queue = optimizer_state['queue']
-  lawa_start_step = math.ceil(workload.step_hint * hyperparameters.lawa_start_factor)
-  lawa_interval = math.ceil(workload.step_hint * hyperparameters.lawa_interval_scaling)
+  lawa = optimizer_state['lawa']
+  
+  # lawa hyperparams
+  lawa_start_step = lawa.lawa_start_step
+  lawa_interval = lawa.lawa_interval
   
   # Discard average and load previous params
-  if optimizer_state['return_avg']:
-    for p,p_old in zip(current_model.parameters(), prev_model.parameters()):
+  if lawa.return_avg:
+    for p,p_old in zip(current_model.parameters(), lawa.prev_params):
       p.data = p_old.to(p.device).clone(memory_format=torch.preserve_format)
   
   # eval just happened -> we stop loading previous model and returning avg
   if len(eval_results) > 0:
     if (global_step-1) == eval_results[-1][0]:
-      optimizer_state['return_avg'] = False
+      lawa.return_avg = False
     
   current_model.train()
   optimizer_state['optimizer'].zero_grad()
@@ -301,19 +347,19 @@ def update_params(workload: spec.Workload,
   
   # Save previous parameters
   if global_step >= lawa_start_step:
-    prev_model.update(current_model.parameters())
+    lawa.update_prev(current_model.parameters())
   
   # Update queue and avg
   if global_step >= lawa_start_step and \
       (global_step-lawa_start_step) % lawa_interval == 0:
-    queue.push(current_model.parameters())
-    if queue.full():
-      queue.update_avg()
-      optimizer_state['return_avg'] = True
+    lawa.queue_append(current_model.parameters())
+    if lawa.queue_full():
+      lawa.update_avg()
+      lawa.return_avg = True
   
   # Load avg into model
-  if optimizer_state['return_avg']:
-    avg = queue.get_avg()
+  if lawa.return_avg:
+    avg = lawa.get_avg()
     for p, p_avg in zip(current_model.parameters(), avg):
       p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
   

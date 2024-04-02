@@ -123,6 +123,11 @@ flags.DEFINE_string(
     'an absolute path rather than a relative path.')
 flags.DEFINE_string('experiment_name', None, 'Name of the experiment.')
 flags.DEFINE_boolean(
+    'save_checkpoints',
+    True,
+    'Whether or not to save checkpoints of the model and optimizer '
+    'at every eval and after training.')
+flags.DEFINE_boolean(
     'save_intermediate_checkpoints',
     True,
     'Whether to save any intermediate checkpoints. '
@@ -150,9 +155,6 @@ flags.DEFINE_boolean(
     False,
     'Whether to overwrite the experiment with identical experiment_dir and'
     'experiment_name.')
-flags.DEFINE_boolean('save_checkpoints',
-                     True,
-                     'Whether or not to checkpoint the model at every eval.')
 flags.DEFINE_integer(
     'hparam_start_index',
     None,
@@ -169,9 +171,12 @@ flags.DEFINE_integer(
 flags.DEFINE_boolean('set_pytorch_max_split_size',
                      False,
                      'If true, set pytorch max_split_size_mb to 256')
-flags.DEFINE_integer('pytorch_eval_num_workers',
-                     4,
-                     'Number of workers for PyTorch evaluation data loaders.')
+flags.DEFINE_integer(
+    'pytorch_eval_num_workers',
+    0,
+    'Number of workers for ImageNet PyTorch evaluation data loaders.'
+    'WARNING: Setting pytorch_eval_num_workers != 0, will result '
+    'in incorrect evals currently, see issues/732.')
 # (nico): make deterministic
 flags.DEFINE_boolean('torch_deterministic',
                      False,
@@ -229,6 +234,7 @@ def train_once(
     log_dir: Optional[str] = None,
     save_checkpoints: Optional[bool] = True
 ) -> Tuple[spec.Timing, Dict[str, Any]]:
+  _reset_cuda_mem()
   data_rng, opt_init_rng, model_init_rng, rng = prng.split(rng, 4)
 
   # Workload setup.
@@ -534,17 +540,18 @@ def train_once(
         global_step=global_step,
         preemption_count=preemption_count)
     metrics_logger.finish()
-    checkpoint_utils.save_checkpoint(
-        framework=FLAGS.framework,
-        optimizer_state=optimizer_state,
-        model_params=model_params,
-        model_state=model_state,
-        train_state=train_state,
-        eval_results=eval_results,
-        global_step=global_step,
-        preemption_count=preemption_count,
-        checkpoint_dir=log_dir,
-        save_intermediate_checkpoints=FLAGS.save_intermediate_checkpoints)
+    if save_checkpoints:
+      checkpoint_utils.save_checkpoint(
+          framework=FLAGS.framework,
+          optimizer_state=optimizer_state,
+          model_params=model_params,
+          model_state=model_state,
+          train_state=train_state,
+          eval_results=eval_results,
+          global_step=global_step,
+          preemption_count=preemption_count,
+          checkpoint_dir=log_dir,
+          save_intermediate_checkpoints=FLAGS.save_intermediate_checkpoints)
 
   return train_state['accumulated_submission_time'], metrics
 
@@ -729,6 +736,12 @@ def main(_):
 
   if FLAGS.framework == 'pytorch':
     pytorch_init(USE_PYTORCH_DDP, RANK, profiler)
+
+  # TODO: remove once issue resolved.
+  if FLAGS.pytorch_eval_num_workers != 0:
+    logging.warning(
+        'WARNING: Setting pytorch_eval_num_workers != 0, will result '
+        'in incorrect evals currently, see issues/732.')
 
   workload_metadata = WORKLOADS[FLAGS.workload]
 
