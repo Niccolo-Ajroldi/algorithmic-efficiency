@@ -120,7 +120,6 @@ def get_summary_df(workload, workload_df, include_test_split=False):
   # summary_df.sort_values(['workload', 'trial'], inplace=True)
   # summary_df.reset_index(inplace=True, drop=True)
   
-
   return summary_df
 
 
@@ -134,18 +133,18 @@ def print_submission_summary(df, include_test_split=True):
   df = pd.concat(dfs)
   logging.info('\n' + tabulate(df, headers='keys', tablefmt='psql'))
 
-# (nico): save scores to csv: DEPRECATED UNDER NEW CODE
-def save_submission_summary(df, submission, output_dir):
-  dfs = []
-  for workload, group in df.groupby('workload'):
-    summary_df = get_summary_df(workload, group)
-    dfs.append(summary_df)
-  df = pd.concat(dfs)
+# # (nico): save scores to csv: DEPRECATED UNDER NEW CODE
+# def save_submission_summary(df, submission, output_dir):
+#   dfs = []
+#   for workload, group in df.groupby('workload'):
+#     summary_df = get_summary_df(workload, group)
+#     dfs.append(summary_df)
+#   df = pd.concat(dfs)
 
-  if not os.path.exists(output_dir):
-    os.mkdir(output_dir)
-  csv_file_path = os.path.join(output_dir, 'scores_{}.csv'.format(submission))
-  df.to_csv(csv_file_path, index=False)
+#   if not os.path.exists(output_dir):
+#     os.mkdir(output_dir)
+#   csv_file_path = os.path.join(output_dir, 'scores_{}.csv'.format(submission))
+#   df.to_csv(csv_file_path, index=False)
 
 def main(_):
   results = {}
@@ -158,7 +157,8 @@ def main(_):
     with open(os.path.join(FLAGS.output_dir, f'{submission}_summary.csv'),
               'w') as fout:
       summary_df.to_csv(fout)
-    save_submission_summary(df, submission, FLAGS.output_dir) # nico
+    # # (nico) DEPRECATED UNDER NEW CODE
+    # save_submission_summary(df, submission, FLAGS.output_dir) 
 
   if not FLAGS.strict:
     logging.warning(
