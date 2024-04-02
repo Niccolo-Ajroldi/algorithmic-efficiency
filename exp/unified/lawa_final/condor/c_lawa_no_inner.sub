@@ -8,8 +8,8 @@ workload=criteo1tb
 search_space=exp/unified/lawa_final/json/trial_5.json
 
 # Submission
-submission=submissions/lawa_cpu_bf16/lawa.py
-exp_name=lw_lawa_bf16_7_no_inner
+submission=submissions/lawa_cpu/lawa.py
+exp_name=lw_lawa_no_inner_2
 study=1
 num_tuning_trials=1
 rng_seed=1
