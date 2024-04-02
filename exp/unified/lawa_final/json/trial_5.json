@@ -30,6 +30,9 @@
       "feasible_points": [0.002]
     },
     "k": {
-      "feasible_points": [10, 15]
+      "feasible_points": [10]
+    },
+    "lawa_beta": {
+      "feasible_points": [0.9]
     }
 }

@@ -3,15 +3,15 @@
 source ~/.bashrc
 conda activate alpe
 
-export CUDA_VISIBLE_DEVICES=0
+# export CUDA_VISIBLE_DEVICES=0
 
 # Job specific vars
 workload=mnist
 dataset=MNIST
-submission=submissions/lawa_ema_trick/lawa.py
+submission=submissions/lawa_cpu_bf16/lawa.py
 search_space=exp/seal/lawa_ema/nadamw/space_1.json
 trials=1
-name="lawa_ema_trick_01"
+name="check_01"
 
 # Execute python script
 python3 $CODE_DIR/submission_runner.py \
@@ -26,5 +26,4 @@ python3 $CODE_DIR/submission_runner.py \
     --experiment_name=$name \
     --overwrite \
     --save_checkpoints=False \
-    --max_global_steps 1000 \
     --rng_seed=1996

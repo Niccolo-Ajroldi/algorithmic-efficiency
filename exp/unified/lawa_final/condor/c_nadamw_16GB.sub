@@ -1,22 +1,19 @@
 # Define variables
 LOGS_DIR=/fast/najroldi/logs/algoperf
-EXE=/home/najroldi/algorithmic-efficiency/exp/unified/lawa_trick_check_cpu_ram/condor/auto_run_array.sh
+EXE=/home/najroldi/algorithmic-efficiency/exp/unified/lawa_final/condor/auto_run_array.sh
 
 # Job specific vars
 dataset=criteo1tb
 workload=criteo1tb
-search_space=exp/unified/lawa_trick_check_cpu_ram/json/trial_5.json
-# search_space=exp/unified/lawa_trick_check_cpu_ram/json/trial_5_copy.json
+search_space=exp/unified/lawa_final/json/trial_5.json
 
 # Submission
-submission=submissions/lawa_trick/lawa.py
-# submission=submissions/lawa_trick_bf16/lawa.py
-exp_name=lawa_trick_check_CudaCapability7
-# exp_name=lawa_trick_bf16_check
+submission=prize_qualification_baselines/external_tuning/nadamw_full_b_lighter.py
+exp_name=lw_nadamw_PCIE_16GB
 study=1
-num_tuning_trials=2
-# num_tuning_trials=1
+num_tuning_trials=1
 rng_seed=1
+max_global_steps=4008
 
 # Args
 executable = $(EXE)
@@ -29,7 +26,8 @@ arguments = \
   $(study) \
   $(num_tuning_trials) \
   $(Process) \
-  $(rng_seed)
+  $(rng_seed) \
+  $(max_global_steps)
 
 # Logs
 error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
@@ -40,6 +38,6 @@ log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 request_memory = 240000
 request_cpus = 28
 request_gpus = 8
-requirements = (TARGET.CUDACapability == 7.0)
+requirements = (TARGET.CUDADeviceName == "Tesla V100-PCIE-16GB")
 
 queue $(num_tuning_trials)

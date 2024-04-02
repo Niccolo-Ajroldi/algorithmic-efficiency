@@ -27,6 +27,9 @@ trial_index=$(($8 + 1))
 # Same seed across trials
 rng_seed=$9
 
+# max_global_steps
+max_global_steps=${10}
+
 # Experiment name
 experiment_name="${name}"
 
@@ -67,4 +70,4 @@ torchrun \
   --use_wandb \
   --rng_seed=$rng_seed \
   --fixed_space \
-  --extra_wandb_logging
+  --max_global_steps=$max_global_steps
