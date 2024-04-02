@@ -177,6 +177,15 @@ flags.DEFINE_integer(
     'Number of workers for ImageNet PyTorch evaluation data loaders.'
     'WARNING: Setting pytorch_eval_num_workers != 0, will result '
     'in incorrect evals currently, see issues/732.')
+# (nico): make deterministic
+flags.DEFINE_boolean('torch_deterministic',
+                     False,
+                     'If true, use_deterministic_algorithms')
+# (nico): log LR
+flags.DEFINE_boolean('extra_wandb_logging',
+                     False,
+                     'Log LR')
+
 FLAGS = flags.FLAGS
 USE_PYTORCH_DDP, RANK, DEVICE, N_GPUS = pytorch_setup()
 
