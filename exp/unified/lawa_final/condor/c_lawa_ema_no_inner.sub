@@ -1,19 +1,19 @@
 # Define variables
 LOGS_DIR=/fast/najroldi/logs/algoperf
-EXE=/home/najroldi/algorithmic-efficiency/exp/unified/lawa_bf16/condor/auto_run_array.sh
+EXE=/home/najroldi/algorithmic-efficiency/exp/unified/lawa_final/condor/auto_run_array.sh
 
 # Job specific vars
-dataset=imagenet
-workload=imagenet_resnet
-search_space=exp/unified/lawa_bf16/json/trial_2.json
+dataset=criteo1tb
+workload=criteo1tb
+search_space=exp/unified/lawa_final/json/trial_5.json
 
 # Submission
-submission=submissions/lawa_ema_trick_bf16/lawa.py
-exp_name=lw_bf16_ema_1
+submission=submissions/lawa_cpu/lawa.py
+exp_name=lw_lawa_no_inner_2
 study=1
 num_tuning_trials=1
 rng_seed=1
-max_global_steps=10
+max_global_steps=4008
 
 # Args
 executable = $(EXE)

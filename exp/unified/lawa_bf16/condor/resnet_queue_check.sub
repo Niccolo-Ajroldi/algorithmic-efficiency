@@ -3,8 +3,8 @@ LOGS_DIR=/fast/najroldi/logs/algoperf
 EXE=/home/najroldi/algorithmic-efficiency/exp/unified/lawa_bf16/condor/auto_run_array.sh
 
 # Job specific vars
-dataset=imagenet_resnet
-workload=criteo1tb
+dataset=imagenet
+workload=imagenet_resnet
 search_space=exp/unified/lawa_bf16/json/trial_2.json
 
 # Submission
