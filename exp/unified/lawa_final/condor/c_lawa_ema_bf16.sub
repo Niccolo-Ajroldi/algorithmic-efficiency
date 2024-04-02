@@ -9,7 +9,7 @@ search_space=exp/unified/lawa_final/json/trial_5.json
 
 # Submission
 submission=submissions/lawa_ema_trick_bf16/lawa.py
-exp_name=lw_lawa_ema_bf16_6
+exp_name=lw_lawa_ema_bf16_fixed
 study=1
 num_tuning_trials=1
 rng_seed=1

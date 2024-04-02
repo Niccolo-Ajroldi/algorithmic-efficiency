@@ -377,10 +377,6 @@ def update_params(workload: spec.Workload,
     optimizer_state['optimizer'].step()
     optimizer_state['scheduler'].step()
 
-    # Save previous parameters
-    if local_step >= lawa_start_step:
-      lawa.update_prev(current_model.parameters())
-
     # Update queue
     if local_step >= lawa_start_step and \
         (local_step-lawa_start_step) % lawa_interval == 0:
@@ -389,6 +385,10 @@ def update_params(workload: spec.Workload,
     # Update local_step
     local_step.add_(1)
 
+  # Save previous parameters
+  if local_step >= lawa_start_step:
+    lawa.update_prev(current_model.parameters())
+    
   # Load avg into model
   if lawa.queue_full():
     avg = lawa.queue_avg()

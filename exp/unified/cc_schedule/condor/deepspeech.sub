@@ -11,6 +11,7 @@ search_space=exp/unified/cc_schedule/json/trial_5_2params.json
 submission=submissions/cc_schedule/nadamw.py
 # submission=submissions/cc_schedule_simple/nadamw.py
 # exp_name=cc_schedule_simple_01
+exp_name=cc_schedule_02
 study=1
 num_tuning_trials=2
 rng_seed=1
