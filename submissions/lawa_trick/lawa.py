@@ -242,9 +242,12 @@ class LAWA():
 
   def queue_avg(self):
     k = float(self.maxlen)
-    q_avg = [torch.zeros_like(p, device='cpu', memory_format=torch.preserve_format) for p in self.queue[0]]
 
-    for chkpts in self.queue:
+    # Initialize avg with first element of the queue
+    q_avg = [p.detach().clone().cpu().div_(k) for p in self.queue[0]]
+
+    # Loop over queue and update avg
+    for chkpts in self.queue[1:]:
       for p_avg,p in zip(q_avg, chkpts):
         p_avg.add_(p/k)
 
