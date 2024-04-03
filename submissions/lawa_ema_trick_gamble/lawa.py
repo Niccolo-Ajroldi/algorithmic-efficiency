@@ -9,8 +9,6 @@ import torch
 from torch import Tensor
 import torch.distributed.nn as dist_nn
 
-from itertools import islice
-
 from algorithmic_efficiency import spec
 from algorithmic_efficiency.pytorch_utils import pytorch_setup
 
@@ -221,8 +219,8 @@ class WarmCosine(object):
 class LAWA():
   def __init__(self, hyperparameters, workload) -> None:
     self.prev_params = None
-    self.maxlen = int(hyperparameters.k)
-    self.queue = deque(maxlen=self.maxlen)
+    self.beta = int(hyperparameters.lawa_beta)
+    self.ema = None
     self.local_step = torch.tensor(0.)
 
     self.lawa_start_step = math.ceil(workload.step_hint * hyperparameters.lawa_start_factor)
@@ -233,31 +231,25 @@ class LAWA():
 
     self.steps_per_call = math.ceil(steps_per_eval) # number of steps in inner loop
 
+    self.return_avg = True
+
   def update_prev(self, params):
     self.prev_params = [p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params]
 
-  def queue_append(self, params):
-    self.queue.append([p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params])
+  def ema_update(self, params):
+    if self.ema is None:
+      self.ema = [p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params]      
+      return
+    beta = self.beta
+    for p_ema, p in zip(self.ema, params):
+      p_ema.mul_(beta).add_(p.detach().cpu(), alpha=1-beta)
 
-  def queue_full(self):
-    return (len(self.queue)==self.maxlen)
+  def get_ema(self):
+    return self.ema
 
-  def queue_avg(self):
-    k = float(self.maxlen)
-
-    # Initialize avg with first element of the queue
-    q_avg = [p.detach().clone().cpu().div_(k) for p in self.queue[0]]
-
-    # Loop over queue and update avg
-    for chkpts in islice(self.queue, 1, None):
-      for p_avg,p in zip(q_avg, chkpts):
-        p_avg.add_(p/k)
-
-    return q_avg
-  
   def state_dict(self):
     return {key: value for key, value in self.__dict__.items()}
-  
+
   def load_state_dict(self, state_dict):
     self.__dict__.update(state_dict)
 
@@ -323,9 +315,14 @@ def update_params(workload: spec.Workload,
 
   # Discard average and load previous params
   if local_step > lawa_start_step and lawa.queue_full():
-    for p,p_old in zip(current_model.parameters(), lawa.prev_params):
-      p.data = p_old.to(p.device).clone(memory_format=torch.preserve_format)
-
+    if lawa.return_avg:
+      for p,p_old in zip(current_model.parameters(), lawa.prev_params):
+        p.data = p_old.to(p.device).clone(memory_format=torch.preserve_format)
+      lawa.return_avg = False
+    else:
+      # We will return avg this time
+      lawa.return_avg = True
+    
   # Internal loop
   for _ in range(steps_per_call):
 
@@ -364,21 +361,21 @@ def update_params(workload: spec.Workload,
     optimizer_state['optimizer'].step()
     optimizer_state['scheduler'].step()
 
-    # Update queue
+    # Update ema
     if local_step >= lawa_start_step and \
         (local_step-lawa_start_step) % lawa_interval == 0:
-      lawa.queue_append(current_model.parameters())
+      lawa.ema_update(current_model.parameters())
 
     # Update local_step
     local_step.add_(1)
 
   # Save previous parameters
-  if local_step >= lawa_start_step:
+  if local_step >= lawa_start_step and lawa.return_avg:
     lawa.update_prev(current_model.parameters())
-
+    
   # Load avg into model
-  if lawa.queue_full():
-    avg = lawa.queue_avg()
+  if local_step >= lawa_start_step and lawa.return_avg:
+    avg = lawa.get_ema()
     for p, p_avg in zip(current_model.parameters(), avg):
       p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
 
