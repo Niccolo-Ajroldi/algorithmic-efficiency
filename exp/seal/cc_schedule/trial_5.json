@@ -23,9 +23,6 @@
     "warmup_factor": {
       "feasible_points": [0.02]
     },
-    "cc_alpha": {
-      "feasible_points": [0.25]
-    },
     "cc_decay_factor": {
       "feasible_points": [0.02]
     },

@@ -331,6 +331,7 @@ def update_params(workload: spec.Workload,
   del current_params_types
   del loss_type
   del eval_results
+  del global_step
 
   current_model = current_param_container
   current_model.train()

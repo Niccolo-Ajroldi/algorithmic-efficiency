@@ -186,51 +186,89 @@ def nadamw(params: List[Tensor],
     param.addcdiv_(exp_avg, denom, value=-step_size)
     exp_avg.sub_(grad, alpha=1 - beta1).div_(beta1)
 
-def make_lr_schedule(alpha, T, lr_min, lr_max, warmup_steps, d1, d2):
-  
-  def g(t):
-    return 1 + math.cos(t * math.pi / T)
 
-  a_1 = 0.5 * (lr_max-lr_min)
-  a_2 = a_1 * g(alpha * T) / g(alpha * T + d1 + d2)
-  a_3 = a_2 * g(2.0 * alpha * T) / g(2.0 * alpha * T + d1 + d2)
-  a_4 = a_3 * g(3.0 * alpha * T) / g(3.0 * alpha * T + d1 + d2)
+class CarvedCosine(object):
+  """
+    Implements cosine schedule with linear cooldowns.
+    colldown = linear decay + linear warmup.
+  """
 
-  def a(phi):
+  def __init__(self, optimizer, lr_min, lr_max, T, warmup_steps, cc_decay_factor, cc_warmup_factor):
+    self.optimizer = optimizer
+    self.lr_min = lr_min
+    self.lr_max = lr_max
+    self.T = T
+    self.t = 0
+
+    # first linear warmup
+    self.warmup_steps = warmup_steps
+
+    # linear cooldown = linear decay + warmup
+    self.d1 = T * cc_decay_factor
+    self.d2 = T * cc_warmup_factor
+
+    # amplitude of cosine schedule
+    self.a_1 = 0.5 * (self.lr_max-self.lr_min)
+    self.a_2 = self.a_1 * self.g(0.25 * T) / self.g(0.25 * T + self.d1 + self.d2)
+    self.a_3 = self.a_2 * self.g(2.0 * 0.25 * T) / self.g(2.0 * 0.25 * T + self.d1 + self.d2)
+    self.a_4 = self.a_3 * self.g(3.0 * 0.25 * T) / self.g(3.0 * 0.25 * T + self.d1 + self.d2)
+
+  def a(self, phi):
+    # amplitude of cosine schedule, phi is the cycle index
     if phi==1: 
-      return a_1
+      return self.a_1
     elif phi==2:
-      return a_2
+      return self.a_2
     elif phi==3:
-      return a_3
+      return self.a_3
     elif phi==4:
-      return a_4
+      return self.a_4
 
-  def f(t, phi):
-    return lr_min + a(phi) * g(t)
+  def g(self, t):
+    # wrapper for cosine
+    return 1 + math.cos(t * math.pi / self.T)
 
-  def decay(t, phi):
-    return lr_min + (lr_min - f(phi*alpha*T, phi))/d1 * (t - phi*alpha*T - d1)
+  def f(self, t, phi):
+    # cosine(t) at cycle index phi
+    return self.lr_min + self.a(phi) * self.g(t)
 
-  def warmup(t, phi):
-    return lr_min + (-lr_min + f(phi*alpha*T, phi))/d2 * (t - phi*alpha*T - d1)
+  def decay(self, t, phi):
+    # decay(t) at cycle index phi
+    return self.lr_min + (self.lr_min - self.f(phi*0.25*self.T, phi))/self.d1 * (t - phi*0.25*self.T - self.d1)
 
-  def schedule(t):
-    if t<= warmup_steps:
-      return lr_min + lr_max/warmup_steps * t
+  def warmup(self, t, phi):
+    # warmup(t) at cycle index phi
+    return self.lr_min + (-self.lr_min + self.f(phi*0.25*self.T, phi))/self.d2 * (t - phi*0.25*self.T - self.d1)
+
+  def schedule(self, t):
+    # cosine with linear cooldowns
+    if t<= self.warmup_steps:
+      return self.lr_min + self.lr_max/self.warmup_steps * t
     for phi in range(1,4):
-      if t <= phi * alpha * T:
-        return f(t, phi)
-      elif t <= phi * alpha * T + d1:
-        return decay(t, phi)
-      elif t <= phi * alpha * T + + d1 + d2:
-        return warmup(t, phi)  
-    if t <= T:
-      return f(t, 4)
-    return lr_min
+      if t <= phi * 0.25 * self.T:
+        return self.f(t, phi)
+      elif t <= phi * 0.25 * self.T + self.d1:
+        return self.decay(t, phi)
+      elif t <= phi * 0.25 * self.T + + self.d1 + self.d2:
+        return self.warmup(t, phi)  
+    if t <= self.T:
+      return self.f(t, 4)
+    return self.lr_min
 
-  return schedule
-  
+  def step(self):
+    self.t += 1
+    # set LR in optimizer
+    lr = self.schedule(self.t)
+    for group in self.optimizer.param_groups:
+      group["lr"] = lr
+
+  def state_dict(self):
+    return {key: value for key, value in self.__dict__.items() if key != "optimizer"}
+
+  def load_state_dict(self, state_dict):
+    self.__dict__.update(state_dict)
+
+
 def init_optimizer_state(workload: spec.Workload,
                          model_params: spec.ParameterContainer,
                          model_state: spec.ModelAuxiliaryState,
@@ -251,27 +289,16 @@ def init_optimizer_state(workload: spec.Workload,
               weight_decay=hyperparameters.weight_decay),
   }
 
-  warmup_steps = workload.step_hint * hyperparameters.warmup_factor
-  d1 = workload.step_hint * hyperparameters.cc_decay_factor
-  d2 = workload.step_hint * hyperparameters.cc_warmup_factor
-
   # Create learning rate schedule.
-  schedule = make_lr_schedule(
-      alpha = hyperparameters.cc_alpha,
-      T = workload.step_hint,
-      lr_min = 1e-10, 
-      lr_max = hyperparameters.learning_rate,
-      warmup_steps = warmup_steps,
-      d1 = d1,
-      d2 = d2)
-
-  # PyTorch's LambdaLR expects the lr_lambda fn to return a factor which will
-  # be multiplied with the base lr, so we have to divide by it here.
-  def lr_lambda(step: int) -> float:
-    return schedule(step) / hyperparameters.learning_rate
-
-  optimizer_state['scheduler'] = LambdaLR(
-    optimizer_state['optimizer'], lr_lambda=lr_lambda)
+  optimizer_state['scheduler'] = CarvedCosine(
+    optimizer = optimizer_state['optimizer'],
+    lr_max = hyperparameters.learning_rate, 
+    lr_min = 1e-10,
+    T = workload.step_hint,
+    warmup_steps = int(hyperparameters.warmup_factor * workload.step_hint),
+    cc_decay_factor = hyperparameters.cc_decay_factor,
+    cc_warmup_factor = hyperparameters.cc_warmup_factor
+  )
 
   return optimizer_state
 
@@ -291,6 +318,7 @@ def update_params(workload: spec.Workload,
   del current_params_types
   del loss_type
   del eval_results
+  del global_step
 
   current_model = current_param_container
   current_model.train()
@@ -307,10 +335,6 @@ def update_params(workload: spec.Workload,
   label_smoothing = (
       hyperparameters.label_smoothing if hasattr(hyperparameters,
                                                  'label_smoothing') else 0.0)
-  if hasattr(hyperparameters, 'grad_clip'):
-    grad_clip = hyperparameters.grad_clip
-  else:
-    grad_clip = None
 
   loss_dict = workload.loss_fn(
       label_batch=batch['targets'],
@@ -327,9 +351,6 @@ def update_params(workload: spec.Workload,
 
   loss.backward()
 
-  if grad_clip is not None:
-    torch.nn.utils.clip_grad_norm_(
-        current_model.parameters(), max_norm=grad_clip)
   optimizer_state['optimizer'].step()
   optimizer_state['scheduler'].step()
 
@@ -343,7 +364,7 @@ def get_batch_size(workload_name):
   elif workload_name == 'fastmri':
     return 32
   elif workload_name == 'imagenet_resnet':
-    return 1024
+    return 512
   elif workload_name == 'imagenet_vit':
     return 1024
   elif workload_name == 'librispeech_conformer':

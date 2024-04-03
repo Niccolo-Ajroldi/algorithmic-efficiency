@@ -3,11 +3,11 @@
 source ~/.bashrc
 conda activate alpe
 
-export CUDA_VISIBLE_DEVICES=5
+export CUDA_VISIBLE_DEVICES=0
 
 # Job specific vars
-workload=ogbg
-dataset=ogbg
+workload=mnist
+dataset=MNIST
 submission=submissions/cc_schedule/nadamw.py
 search_space=exp/seal/cc_schedule/trial_5.json
 trials=1
