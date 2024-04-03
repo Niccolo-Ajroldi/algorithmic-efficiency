@@ -1,38 +1,35 @@
 {
     "trial_number": {
-        "feasible_points": [5]
+        "feasible_points": [4]
     },
     "dropout_rate": {
-        "feasible_points": [0.1]
+        "feasible_points": [0.0]
     },
     "label_smoothing": {
         "feasible_points": [0.0]
     },
     "learning_rate": {
-      "feasible_points": [0.0017486387539278373]
+      "feasible_points": [0.004958460849689891]
     },
     "one_minus_beta1": {
-        "feasible_points": [0.06733926164]
+        "feasible_points": [0.13625575743]
     },
     "beta2": {
-        "feasible_points": [0.9955159689799007]
+        "feasible_points": [0.6291854735396584]
     },
     "weight_decay": {
-        "feasible_points": [0.08121616522670176]
+        "feasible_points": [0.1147386261512052]
     },
     "warmup_factor": {
       "feasible_points": [0.02]
     },
     "lawa_start_factor": {
-      "feasible_points": [0.0]
+      "feasible_points": [0.05]
     },
     "lawa_interval_scaling": {
-      "feasible_points": [0.001]
+      "feasible_points": [0.002, 0.005, 0.01]
     },
     "lawa_beta": {
-      "feasible_points": [0.5]
-    },
-    "k": {
-      "feasible_points": [7]
+      "feasible_points": [0.2, 0.5, 0.8]
     }
-}
+  }

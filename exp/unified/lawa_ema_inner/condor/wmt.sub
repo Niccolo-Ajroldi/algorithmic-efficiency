@@ -5,13 +5,13 @@ EXE=/home/najroldi/algorithmic-efficiency/exp/unified/lawa_ema_inner/condor/auto
 # Job specific vars
 dataset=wmt
 workload=wmt
-search_space=exp/unified/lawa_ema_inner/json/trial_5.json
+search_space=exp/unified/lawa_ema_inner/json_05/trial_5.json
 
 # Submission
 submission=submissions/lawa_ema_trick/lawa.py
-exp_name=sub_lawaema_01
+exp_name=sub_lawaema_03
 study=1
-num_tuning_trials=9
+num_tuning_trials=12
 rng_seed=1
 
 # Args

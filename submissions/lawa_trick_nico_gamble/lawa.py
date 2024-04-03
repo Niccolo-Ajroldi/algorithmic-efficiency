@@ -233,6 +233,8 @@ class LAWA():
 
     self.steps_per_call = math.ceil(steps_per_eval) # number of steps in inner loop
 
+    self.return_avg = True
+
   def update_prev(self, params):
     self.prev_params = [p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params]
 
@@ -321,10 +323,15 @@ def update_params(workload: spec.Workload,
   # Actual optimization step
   local_step = lawa.local_step
 
-  # Discard average and load previous params
   if local_step > lawa_start_step and lawa.queue_full():
-    for p,p_old in zip(current_model.parameters(), lawa.prev_params):
-      p.data = p_old.to(p.device).clone(memory_format=torch.preserve_format)
+    if lawa.return_avg:
+      # If we have returned avg last time, we discard it and load previous
+      for p,p_old in zip(current_model.parameters(), lawa.prev_params):
+        p.data = p_old.to(p.device).clone(memory_format=torch.preserve_format)
+      lawa.return_avg = False # and flip the boolean
+    else:
+      # We will return avg this time
+      lawa.return_avg = True
 
   # Internal loop
   for _ in range(steps_per_call):
@@ -373,11 +380,11 @@ def update_params(workload: spec.Workload,
     local_step.add_(1)
 
   # Save previous parameters
-  if local_step >= lawa_start_step:
+  if local_step >= lawa_start_step and lawa.return_avg:
     lawa.update_prev(current_model.parameters())
 
   # Load avg into model
-  if lawa.queue_full():
+  if lawa.queue_full() and lawa.return_avg:
     avg = lawa.queue_avg()
     for p, p_avg in zip(current_model.parameters(), avg):
       p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
