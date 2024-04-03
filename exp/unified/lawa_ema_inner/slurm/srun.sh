@@ -20,11 +20,11 @@ export CODE_DIR=~/algorithmic-efficiency
 export EXP_DIR=/ptmp/najroldi/exp/algoperf
 export DATA_DIR=/ptmp/najroldi/data
 
-dataset=ogbg
-workload=ogbg
+dataset=librispeech
+workload=librispeech_deepspeech
 submission=submissions/lawa_ema_trick/lawa.py
 search_space=exp/unified/lawa_ema_inner/json_02/trial_5.json
-exp_name=sub_lawaema_01
+exp_name=sub_lawaema_02
 study=1
 num_tuning_trials=${SLURM_ARRAY_TASK_MAX}
 trial_index=${SLURM_ARRAY_TASK_ID}
