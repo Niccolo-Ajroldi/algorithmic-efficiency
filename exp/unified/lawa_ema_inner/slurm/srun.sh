@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name=criteo1tb_ema_gamble
+#SBATCH --job-name=fastmri_ema_gamble
 #SBATCH --array=1-24
 #SBATCH --error=/ptmp/najroldi/logs/algoperf/err/%x_%A_%a.err
 #SBATCH --output=/ptmp/najroldi/logs/algoperf/out/%x_%A_%a.out
@@ -20,11 +20,11 @@ export CODE_DIR=~/algorithmic-efficiency
 export EXP_DIR=/ptmp/najroldi/exp/algoperf
 export DATA_DIR=/ptmp/najroldi/data
 
-dataset=criteo1tb
-workload=criteo1tb
+dataset=fastmri
+workload=fastmri
 submission=submissions/lawa_ema_trick_gamble/lawa.py
 search_space=exp/unified/lawa_ema_inner/json_gamble/trial_5.json
-exp_name=sub_lawaema_gamble_02
+exp_name=sub_lawaema_gamble_04
 study=1
 num_tuning_trials=${SLURM_ARRAY_TASK_MAX}
 trial_index=${SLURM_ARRAY_TASK_ID}
