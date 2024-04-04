@@ -33,7 +33,7 @@
       "feasible_points": [0.2]
     },
     "lawa_inner_steps_frac": {
-      "feasible_points": [1.0]
+      "feasible_points": [0.25]
     },
     "fake_param": {
       "feasible_points": [1, 2, 3]
