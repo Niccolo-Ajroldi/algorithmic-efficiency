@@ -9,6 +9,7 @@
   "warmup_factor": 0.05,
   "lawa_start_factor": 0.0,
   "lawa_interval": 100,
-  "lawa_beta": 0.6
+  "lawa_beta": 0.6,
+  "lawa_inner_steps_frac": 0.5
   }
 ]
