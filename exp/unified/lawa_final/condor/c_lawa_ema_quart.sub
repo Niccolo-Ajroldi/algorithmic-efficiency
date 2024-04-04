@@ -5,11 +5,11 @@ EXE=/home/najroldi/algorithmic-efficiency/exp/unified/lawa_final/condor/auto_run
 # Job specific vars
 dataset=criteo1tb
 workload=criteo1tb
-search_space=exp/unified/lawa_final/json/trial_5_quart.json
+search_space=exp/unified/lawa_final/json/trial_5_half.json
 
 # Submission
-submission=submissions/lawa_ema_trick/lawa.py
-exp_name=lw_lawa_ema_gamble_quart
+submission=submissions/lawa_ema_trick_gamble/lawa.py
+exp_name=lw_lawa_ema_half
 study=1
 num_tuning_trials=1
 rng_seed=1
