@@ -366,11 +366,10 @@ def update_params(workload: spec.Workload,
   # Save previous parameters
   if local_step >= lawa_start_step:
     lawa.update_prev(current_model.parameters())
-    
+
   # Load avg into model
   if local_step >= lawa_start_step:
-    avg = lawa.get_ema()
-    for p, p_avg in zip(current_model.parameters(), avg):
+    for p, p_avg in zip(current_model.parameters(), lawa.ema):
       p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
 
   return (optimizer_state, current_model, new_model_state)

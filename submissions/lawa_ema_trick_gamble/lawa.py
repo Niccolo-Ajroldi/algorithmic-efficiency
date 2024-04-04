@@ -370,7 +370,7 @@ def update_params(workload: spec.Workload,
         
       # Save previous parameters
       lawa.update_prev(current_model.parameters())
-        
+
       # Load avg into model
       for p, p_avg in zip(current_model.parameters(), lawa.ema):
         p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
