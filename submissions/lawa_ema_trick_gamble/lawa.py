@@ -3,7 +3,7 @@
 import math
 from typing import Dict, Iterator, List, Tuple
 
-from collections import deque
+import random
 
 import torch
 from torch import Tensor
@@ -229,9 +229,10 @@ class LAWA():
     time_per_step = workload.max_allowed_runtime_sec / workload.step_hint
     steps_per_eval = workload.eval_period_time_sec / time_per_step
 
-    self.steps_per_call = math.ceil(steps_per_eval) # number of steps in inner loop
+    # number of steps in inner loop
+    self.steps_per_call = math.ceil(steps_per_eval * hyperparameters.lawa_inner_steps_frac)
 
-    self.return_avg = True
+    self.return_avg = False
 
   def update_prev(self, params):
     self.prev_params = [p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params]
@@ -314,15 +315,13 @@ def update_params(workload: spec.Workload,
   local_step = lawa.local_step
 
   # Discard average and load previous params
-  if local_step > lawa_start_step and lawa.queue_full():
-    if lawa.return_avg:
-      for p,p_old in zip(current_model.parameters(), lawa.prev_params):
-        p.data = p_old.to(p.device).clone(memory_format=torch.preserve_format)
-      lawa.return_avg = False
-    else:
-      # We will return avg this time
-      lawa.return_avg = True
-    
+  if local_step > lawa_start_step and lawa.queue_full() and lawa.return_avg:
+    for p,p_old in zip(current_model.parameters(), lawa.prev_params):
+      p.data = p_old.to(p.device).clone(memory_format=torch.preserve_format)
+  
+  # Decide wether to return avg or not
+  lawa.return_avg = random.choice([True, False])
+
   # Internal loop
   for _ in range(steps_per_call):
 
