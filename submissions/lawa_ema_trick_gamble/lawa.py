@@ -245,9 +245,6 @@ class LAWA():
     for p_ema, p in zip(self.ema, params):
       p_ema.mul_(beta).add_(p.detach().cpu(), alpha=1-beta)
 
-  def get_ema(self):
-    return self.ema
-
   def state_dict(self):
     return {key: value for key, value in self.__dict__.items()}
 
@@ -318,9 +315,6 @@ def update_params(workload: spec.Workload,
   if local_step > lawa_start_step and lawa.return_avg:
     for p,p_old in zip(current_model.parameters(), lawa.prev_params):
       p.data = p_old.to(p.device).clone(memory_format=torch.preserve_format)
-  
-  # Decide wether to return avg or not
-  lawa.return_avg = random.choice([True, False])
 
   # Internal loop
   for _ in range(steps_per_call):
@@ -368,15 +362,18 @@ def update_params(workload: spec.Workload,
     # Update local_step
     local_step.add_(1)
 
-  # Save previous parameters
-  if local_step >= lawa_start_step and lawa.return_avg:
-    lawa.update_prev(current_model.parameters())
-    
-  # Load avg into model
-  if local_step >= lawa_start_step and lawa.return_avg:
-    avg = lawa.get_ema()
-    for p, p_avg in zip(current_model.parameters(), avg):
-      p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
+  # Maybe return avg
+  if local_step >= lawa_start_step:
+
+    lawa.return_avg = random.choice([True, False])
+    if lawa.return_avg:
+        
+      # Save previous parameters
+      lawa.update_prev(current_model.parameters())
+        
+      # Load avg into model
+      for p, p_avg in zip(current_model.parameters(), lawa.ema):
+        p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
 
   return (optimizer_state, current_model, new_model_state)
 
