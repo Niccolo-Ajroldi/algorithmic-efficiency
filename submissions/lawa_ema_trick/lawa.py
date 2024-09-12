@@ -3,8 +3,6 @@
 import math
 from typing import Dict, Iterator, List, Tuple
 
-from collections import deque
-
 import torch
 from torch import Tensor
 import torch.distributed.nn as dist_nn
