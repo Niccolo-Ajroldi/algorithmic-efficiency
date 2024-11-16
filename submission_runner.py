@@ -133,6 +133,9 @@ flags.DEFINE_boolean('profile', False, 'Whether to produce profiling output.')
 flags.DEFINE_integer('max_global_steps',
                      None,
                      'Maximum number of update steps.')
+flags.DEFINE_float('max_pct_of_global_steps',
+                   0.0,
+                   'Maximum number of update steps.')
 flags.DEFINE_boolean(
     'overwrite',
     False,
@@ -160,6 +163,14 @@ flags.DEFINE_integer(
     'Number of workers for ImageNet PyTorch evaluation data loaders.'
     'WARNING: Setting pytorch_eval_num_workers != 0, will result '
     'in incorrect evals currently, see issues/732.')
+flags.DEFINE_boolean(
+    'halve_CUDA_mem',
+    False,
+    'Halve the available VRAM.')
+flags.DEFINE_boolean(
+    'allow_tf32',
+    False,
+    'Allow TF32 on Ampere.')
 FLAGS = flags.FLAGS
 USE_PYTORCH_DDP, RANK, DEVICE, N_GPUS = pytorch_setup()
 
@@ -205,6 +216,7 @@ def train_once(
     rng: spec.RandomState,
     profiler: Profiler,
     max_global_steps: int = None,
+    max_pct_of_global_steps: float = None,
     log_dir: Optional[str] = None,
     save_checkpoints: Optional[bool] = True
 ) -> Tuple[spec.Timing, Dict[str, Any]]:
@@ -365,6 +377,10 @@ def train_once(
     global_step += 1
     if (max_global_steps is not None) and (global_step == max_global_steps):
       train_state['training_complete'] = True
+    # (nico): train for a fixed pct of step_hint
+    if (max_pct_of_global_steps is not None) and \
+        (global_step / workload.step_hint >= max_pct_of_global_steps):
+      train_state['training_complete'] = True
 
     train_step_end_time = get_time()
 
@@ -498,6 +514,7 @@ def score_submission_on_workload(workload: spec.Workload,
                                  tuning_ruleset: str,
                                  profiler: Optional[Profiler] = None,
                                  max_global_steps: Optional[int] = None,
+                                 max_pct_of_global_steps: Optional[float] = None,
                                  imagenet_v2_data_dir: Optional[str] = None,
                                  tuning_search_space: Optional[str] = None,
                                  num_tuning_trials: Optional[int] = None,
@@ -595,6 +612,7 @@ def score_submission_on_workload(workload: spec.Workload,
                                      rng,
                                      profiler,
                                      max_global_steps,
+                                     max_pct_of_global_steps,
                                      tuning_dir_name,
                                      save_checkpoints=save_checkpoints,)
       all_timings[hi] = timing
@@ -631,6 +649,19 @@ def score_submission_on_workload(workload: spec.Workload,
 
 
 def main(_):
+
+  if FLAGS.framework == 'pytorch':
+
+    if FLAGS.halve_CUDA_mem:
+      torch.cuda.set_per_process_memory_fraction(0.5, device=DEVICE)
+
+    if FLAGS.allow_tf32:
+      torch.backends.cuda.matmul.allow_tf32 = True
+      torch.backends.cudnn.allow_tf32 = True
+    else:
+      torch.backends.cuda.matmul.allow_tf32 = False
+      torch.backends.cudnn.allow_tf32 = False
+
   if FLAGS.profile:
     profiler = Profiler()
   else:
@@ -687,6 +718,7 @@ def main(_):
       tuning_ruleset=FLAGS.tuning_ruleset,
       profiler=profiler,
       max_global_steps=FLAGS.max_global_steps,
+      max_pct_of_global_steps=FLAGS.max_pct_of_global_steps,
       imagenet_v2_data_dir=FLAGS.imagenet_v2_data_dir,
       tuning_search_space=FLAGS.tuning_search_space,
       num_tuning_trials=FLAGS.num_tuning_trials,
