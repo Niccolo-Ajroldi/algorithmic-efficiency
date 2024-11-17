@@ -317,11 +317,11 @@ def update_params(workload: spec.Workload,
   lawa = optimizer_state['lawa']
   current_model = current_param_container
   
-  print(f"Step = {global_step}")
+  # print(f"Step = {global_step}")
 
   # Discard average and load previous params
   if lawa.tmp_params is not None:
-    print("Discarding average and loading previous params")
+    # print("Discarding average and loading previous params")
     for p, p_old in zip(current_model.parameters(), lawa.tmp_params):
       p.data.copy_(p_old.data)
     lawa.tmp_params = None
@@ -385,7 +385,7 @@ def prepare_for_eval(workload: spec.Workload,
                      global_step: int,
                      rng: spec.RandomState) -> spec.UpdateReturn:
   
-  print("Prepping for eval")
+  # print("Prepping for eval")
   
   lawa = optimizer_state['lawa']
   current_model = current_param_container
@@ -394,11 +394,11 @@ def prepare_for_eval(workload: spec.Workload,
     return (optimizer_state, current_model, model_state)
 
   # Save parameters for next step
-  print("Saving tmp params")
+  # print("Saving tmp params")
   lawa.store_tmp_params(current_model.parameters())
 
   # Load avg into model
-  print("Loading avg into model params")
+  # print("Loading avg into model params")
   if lawa.full():  # redundant
     avg = lawa.avg()
     for p, p_avg in zip(current_model.parameters(), avg):
