@@ -3,9 +3,11 @@ LAWA queue on NAdamW optimizer with warmup+cosine LR in PyTorch.
 LAWA queue offloaded to cpu.
 
 Hyperparameters:
-  - queue_len
   - lawa_burnin_pct
   - lawa_every_pct
+  - lawa_queue_len
+
+TODO: explore Tensor.copy_(orig, non_blocking=True)
 """
 
 import math
@@ -237,10 +239,10 @@ class LAWA():
     self.every_step = math.ceil(workload.step_hint * hyperparameters.lawa_every_pct)
 
   def store_tmp_params(self, params):
-    self.tmp_params = [p.detach().clone().cpu() for p in params]  # TODO: do I really need clone?
+    self.tmp_params = [p.detach().cpu() for p in params]
 
   def append(self, params):
-    self.queue.append([p.detach().clone().cpu() for p in params])
+    self.queue.append([p.detach().cpu() for p in params])
 
   def full(self):
     return len(self.queue) == self.maxlen
@@ -249,7 +251,7 @@ class LAWA():
     k = float(self.maxlen)
 
     # Initialize avg with first element of the queue
-    q_avg = [p.detach().clone().cpu().div_(k) for p in self.queue[0]]
+    q_avg = [p.clone().div_(k) for p in self.queue[0]] # self.queue[0] is already on cpu!
 
     # Loop over queue and update avg
     for chkpts in islice(self.queue, 1, None):
@@ -317,7 +319,7 @@ def update_params(workload: spec.Workload,
   # Discard average and load previous params
   if lawa.tmp_params is not None:
     for p, p_old in zip(current_model.parameters(), lawa.tmp_params):
-      p.data = p_old.to(p.device).clone(memory_format=torch.preserve_format)
+      p.data.copy_(p_old.data)
     lawa.tmp_params = None
 
   current_model = current_param_container
