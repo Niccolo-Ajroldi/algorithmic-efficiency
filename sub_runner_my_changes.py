@@ -17,13 +17,11 @@ python3 submission_runner.py \
 import datetime
 import gc
 import importlib
-from inspect import signature
 import itertools
 import json
 import os
 import struct
 import time
-from types import MappingProxyType
 from typing import Any, Dict, Optional, Tuple
 
 from absl import app
@@ -51,6 +49,11 @@ from algorithmic_efficiency.pytorch_utils import pytorch_init
 from algorithmic_efficiency.pytorch_utils import pytorch_setup
 from algorithmic_efficiency.pytorch_utils import sync_ddp_time
 from algorithmic_efficiency.workloads import workloads
+
+from algorithmic_efficiency import fixed_space
+
+# nico
+import wandb
 
 # disable only for deepspeech if it works fine for other workloads.
 os.environ['XLA_FLAGS'] = '--xla_gpu_enable_triton_gemm=false'
@@ -87,11 +90,11 @@ flags.DEFINE_integer(
     'trial_index',
     None,
     'Only run trial trial_index/num_tuning_trials, '
-    'should range from 1 to num_tuning_trials')  # (nico)
+    'should range from 1 to num_tuning_trials')
 flags.DEFINE_boolean(
     'fixed_space',
     False,
-    'Fixed space: no sampling from grid.')  # (nico)
+    'Fixed space: no sampling from grid.')
 flags.DEFINE_string('data_dir', '~/data', 'Dataset location.')
 flags.DEFINE_string('imagenet_v2_data_dir',
                     None,
@@ -140,6 +143,9 @@ flags.DEFINE_boolean(
 flags.DEFINE_boolean('use_wandb',
                      False,
                      'Whether to use Weights & Biases logging.')
+flags.DEFINE_boolean('wandb_resume',
+                     False,
+                     'Whether to use allow resume with wandb.')
 flags.DEFINE_boolean('profile', False, 'Whether to produce profiling output.')
 flags.DEFINE_integer('max_global_steps',
                      None,
@@ -171,18 +177,15 @@ flags.DEFINE_integer(
     'Number of workers for ImageNet PyTorch evaluation data loaders.'
     'WARNING: Setting pytorch_eval_num_workers != 0, will result '
     'in incorrect evals currently, see issues/732.')
-flags.DEFINE_boolean(
-    'halve_CUDA_mem',
-    False,
-    'Halve the available VRAM.')
-flags.DEFINE_boolean(
-    'allow_tf32',
-    False,
-    'Allow TF32 on Ampere.')
-flags.DEFINE_integer(
-    'custom_eval_period_time_sec',
-    None,
-    '')
+# (nico): make deterministic
+flags.DEFINE_boolean('torch_deterministic',
+                     False,
+                     'If true, use_deterministic_algorithms')
+# (nico): log LR
+flags.DEFINE_boolean('extra_wandb_logging',
+                     False,
+                     'Log LR')
+
 FLAGS = flags.FLAGS
 USE_PYTORCH_DDP, RANK, DEVICE, N_GPUS = pytorch_setup()
 
@@ -223,7 +226,6 @@ def train_once(
     init_optimizer_state: spec.InitOptimizerFn,
     update_params: spec.UpdateParamsFn,
     data_selection: spec.DataSelectionFn,
-    prepare_for_eval: Optional[spec.PrepareForEvalFn],
     hyperparameters: Optional[spec.Hyperparameters],
     rng_seed: int,
     rng: spec.RandomState,
@@ -297,10 +299,6 @@ def train_once(
                                            hyperparameters,
                                            opt_init_rng)
   logging.info('Initializing metrics bundle.')
-
-  # Check if 'train_state' is in the function signature
-  needs_train_state = 'train_state' in signature(update_params).parameters
-
   # Bookkeeping.
   train_state = {
       'validation_goal_reached': False,
@@ -344,12 +342,10 @@ def train_once(
     flag_file_name = os.path.join(log_dir, f'flags_{preemption_count}.json')
     logging.info(f'Saving flags to {flag_file_name}.')
     logger_utils.write_json(flag_file_name, flags.FLAGS.flag_values_dict())
-    metrics_logger = None
-    if RANK == 0:
-      metrics_logger = logger_utils.set_up_loggers(log_dir,
-                                                   flags.FLAGS,
-                                                   hyperparameters)
-      workload.attach_metrics_logger(metrics_logger)
+    metrics_logger = logger_utils.set_up_loggers(log_dir,
+                                                 flags.FLAGS,
+                                                 hyperparameters)
+    workload.attach_metrics_logger(metrics_logger)
 
   global_start_time = get_time()
   train_state['last_step_end_time'] = global_start_time
@@ -358,13 +354,20 @@ def train_once(
   goals_reached = (
       train_state['validation_goal_reached'] and
       train_state['test_goal_reached'])
+  
+  
+  # # (nico): stop when step == step_hint
+  reached_step_hint = False
+  # while not reached_step_hint and \
+  #     not goals_reached and \
+  #     not train_state['training_complete']:
+  # original:
   while train_state['is_time_remaining'] and \
       not goals_reached and \
       not train_state['training_complete']:
 
     step_rng = prng.fold_in(rng, global_step)
-    data_select_rng, update_rng, prep_eval_rng, eval_rng = \
-      prng.split(step_rng, 4)
+    data_select_rng, update_rng, eval_rng = prng.split(step_rng, 3)
 
     with profiler.profile('Data selection'):
       batch = data_selection(workload,
@@ -388,9 +391,7 @@ def train_once(
             optimizer_state=optimizer_state,
             eval_results=eval_results,
             global_step=global_step,
-            rng=update_rng,
-            **({'train_state': MappingProxyType(train_state)}
-               if needs_train_state else {}))
+            rng=update_rng)
     except spec.TrainingCompleteError:
       train_state['training_complete'] = True
     global_step += 1
@@ -401,143 +402,139 @@ def train_once(
 
     train_state['accumulated_submission_time'] += (
         train_step_end_time - train_state['last_step_end_time'])
-
-    # (nico): use a custom evaluation time in seconds if provided
-    eval_period_time_sec = workload.eval_period_time_sec
-    if FLAGS.custom_eval_period_time_sec is not None:
-      eval_period_time_sec = FLAGS.custom_eval_period_time_sec
+    # Use 3x the runtime budget for the self-tuning ruleset.
+    max_allowed_runtime_sec = (
+        workload.max_allowed_runtime_sec if FLAGS.tuning_ruleset == 'external'
+        else 3 * workload.max_allowed_runtime_sec)
+    train_state['is_time_remaining'] = (
+        train_state['accumulated_submission_time'] < max_allowed_runtime_sec)
+    
+    # (nico) log lr
+    if FLAGS.extra_wandb_logging and wandb.run is not None and 'scheduler' in optimizer_state:
+      wandb.log({
+          'my_step': global_step,
+          'lr': optimizer_state['scheduler'].schedule(global_step)})
+          # 'lr': optimizer_state['scheduler'].get_last_lr()[0]})
       
     # Check if submission is eligible for an untimed eval.
-    if ((train_step_end_time - train_state['last_eval_time']) >=
-        eval_period_time_sec or train_state['training_complete']):
+    if ((train_step_end_time - train_state['last_eval_time'])
+        >= workload.eval_period_time_sec or train_state['training_complete']):
+      with profiler.profile('Evaluation'):
+        del batch
+        _reset_cuda_mem()
 
-      # Prepare for evaluation (timed).
-      if prepare_for_eval is not None:
+        try:
+          eval_start_time = get_time()
+          # nico
+          if wandb.run is not None and FLAGS.extra_wandb_logging:
+            wandb.log({
+              'my_step': global_step,
+              'is_eval_step': 1})
+          latest_eval_result = workload.eval_model(global_eval_batch_size,
+                                                   model_params,
+                                                   model_state,
+                                                   eval_rng,
+                                                   data_dir,
+                                                   imagenet_v2_data_dir,
+                                                   global_step)
+          # Check if targets reached.
+          # Note that this is one of the stopping conditions for the length of
+          # a training run. To score the run we only consider the time
+          # to validation target retrospectively.
+          train_state['validation_goal_reached'] = (
+              workload.has_reached_validation_target(latest_eval_result) or
+              train_state['validation_goal_reached'])
+          
+          # (nico): I don't care about test target, I removed test eval
+          train_state['test_goal_reached'] = False
+          # train_state['test_goal_reached'] = (
+          #     workload.has_reached_test_target(latest_eval_result) or
+          #     train_state['test_goal_reached'])
+          
+          # (nico): FIX + I don't care about test target
+          goals_reached = train_state['validation_goal_reached']
+          
+          # (nico): stop at ma_steps, allow reproducibility across machines
+          reached_step_hint = (global_step > workload.step_hint)
+          
+          # # (nico): add logging
+          # if goals_reached and wandb.run is not None:
+          #   wandb.log({"target_reached": 1})
+          # if reached_step_hint and wandb.run is not None:
+          #   wandb.log({"reached_step_hint": 1})
 
-        with profiler.profile('Prepare for eval'):
-          del batch
-          prepare_for_eval_start_time = get_time()
-          optimizer_state, model_params, model_state = prepare_for_eval(
-              workload=workload,
-              current_param_container=model_params,
-              current_params_types=workload.model_params_types,
-              model_state=model_state,
-              hyperparameters=hyperparameters,
-              loss_type=workload.loss_type,
-              optimizer_state=optimizer_state,
-              eval_results=eval_results,
-              global_step=global_step,
-              rng=prep_eval_rng)
-          prepare_for_eval_end_time = get_time()
+          # Save last eval time.
+          eval_end_time = get_time()
+          train_state['last_eval_time'] = eval_end_time
 
-        # Update sumbission time.
-        train_state['accumulated_submission_time'] += (
-            prepare_for_eval_end_time - prepare_for_eval_start_time)
+          # Accumulate eval time.
+          train_state[
+              'accumulated_eval_time'] += eval_end_time - eval_start_time
 
-      # Check if time is remaining,
-      # use 3x the runtime budget for the self-tuning ruleset.
-      max_allowed_runtime_sec = (
-          workload.max_allowed_runtime_sec if FLAGS.tuning_ruleset == 'external'
-          else 3 * workload.max_allowed_runtime_sec)
-      train_state['is_time_remaining'] = (
-          train_state['accumulated_submission_time'] < max_allowed_runtime_sec)
+          # Add times to eval results for logging.
+          latest_eval_result['score'] = (
+              train_state['accumulated_submission_time'])
+          latest_eval_result[
+              'total_duration'] = eval_end_time - global_start_time
+          latest_eval_result['accumulated_submission_time'] = train_state[
+              'accumulated_submission_time']
+          latest_eval_result['accumulated_eval_time'] = train_state[
+              'accumulated_eval_time']
+          latest_eval_result['accumulated_logging_time'] = train_state[
+              'accumulated_logging_time']
+          time_since_start = latest_eval_result['total_duration']
+          logging.info(f'Time since start: {time_since_start:.2f}s, '
+                       f'\tStep: {global_step}, \t{latest_eval_result}')
+          eval_results.append((global_step, latest_eval_result))
 
-      # Eval if time is remaining (untimed).
-      if train_state['is_time_remaining']:
+          logging_start_time = get_time()
 
-        with profiler.profile('Evaluation'):
-          _reset_cuda_mem()
-
-          try:
-            eval_start_time = get_time()
-            latest_eval_result = workload.eval_model(global_eval_batch_size,
-                                                     model_params,
-                                                     model_state,
-                                                     eval_rng,
-                                                     data_dir,
-                                                     imagenet_v2_data_dir,
-                                                     global_step)
-            # Check if targets reached.
-            # Note that this is one of the stopping conditions for the length of
-            # a training run. To score the run we only consider the time
-            # to validation target retrospectively.
-            train_state['validation_goal_reached'] = (
-                workload.has_reached_validation_target(latest_eval_result) or
-                train_state['validation_goal_reached'])
-            # (nico): skip test eval
-            train_state['test_goal_reached'] = False
-            # train_state['test_goal_reached'] = (
-            #     workload.has_reached_test_target(latest_eval_result) or
-            #     train_state['test_goal_reached'])
-            goals_reached = (
-                train_state['validation_goal_reached'] and
-                train_state['test_goal_reached'])
-            # Save last eval time.
-            eval_end_time = get_time()
-            train_state['last_eval_time'] = eval_end_time
-
-            # Accumulate eval time.
-            train_state[
-                'accumulated_eval_time'] += eval_end_time - eval_start_time
-
-            # Add times to eval results for logging.
-            latest_eval_result['score'] = (
-                train_state['accumulated_submission_time'])
-            latest_eval_result[
-                'total_duration'] = eval_end_time - global_start_time
-            latest_eval_result['accumulated_submission_time'] = train_state[
-                'accumulated_submission_time']
-            latest_eval_result['accumulated_eval_time'] = train_state[
-                'accumulated_eval_time']
-            latest_eval_result['accumulated_logging_time'] = train_state[
-                'accumulated_logging_time']
-            time_since_start = latest_eval_result['total_duration']
-            logging.info(f'Time since start: {time_since_start:.2f}s, '
-                         f'\tStep: {global_step}, \t{latest_eval_result}')
-            eval_results.append((global_step, latest_eval_result))
-
-            logging_start_time = get_time()
-
-            if log_dir is not None and RANK == 0:
-              metrics_logger.append_scalar_metrics(
-                  latest_eval_result,
+          if log_dir is not None:
+            metrics_logger.append_scalar_metrics(
+                latest_eval_result,
+                global_step=global_step,
+                preemption_count=preemption_count,
+                is_eval=True,
+            )
+            if save_checkpoints:
+              checkpoint_utils.save_checkpoint(
+                  framework=FLAGS.framework,
+                  optimizer_state=optimizer_state,
+                  model_params=model_params,
+                  model_state=model_state,
+                  train_state=train_state,
+                  eval_results=eval_results,
                   global_step=global_step,
                   preemption_count=preemption_count,
-                  is_eval=True,
-              )
-              if save_checkpoints:
-                checkpoint_utils.save_checkpoint(
-                    framework=FLAGS.framework,
-                    optimizer_state=optimizer_state,
-                    model_params=model_params,
-                    model_state=model_state,
-                    train_state=train_state,
-                    eval_results=eval_results,
-                    global_step=global_step,
-                    preemption_count=preemption_count,
-                    checkpoint_dir=log_dir,
-                    save_intermediate_checkpoints=FLAGS
-                    .save_intermediate_checkpoints)
+                  checkpoint_dir=log_dir,
+                  save_intermediate_checkpoints=FLAGS
+                  .save_intermediate_checkpoints)
 
-            logging_end_time = get_time()
-            train_state['accumulated_logging_time'] += (
-                logging_end_time - logging_start_time)
+          logging_end_time = get_time()
+          train_state['accumulated_logging_time'] += (
+              logging_end_time - logging_start_time)
 
+          _reset_cuda_mem()
+
+        except RuntimeError as e:
+          logging.exception(f'Eval step {global_step} error.\n')
+          if 'out of memory' in str(e):
+            logging.warning('Error: GPU out of memory during eval during step '
+                            f'{global_step}, error : {str(e)}.')
             _reset_cuda_mem()
-
-          except RuntimeError as e:
-            logging.exception(f'Eval step {global_step} error.\n')
-            if 'out of memory' in str(e):
-              logging.warning(
-                  'Error: GPU out of memory during eval during step '
-                  f'{global_step}, error : {str(e)}.')
-              _reset_cuda_mem()
 
     train_state['last_step_end_time'] = get_time()
 
   metrics = {'eval_results': eval_results, 'global_step': global_step}
-
-  if log_dir is not None and RANK == 0:
+  
+  # (nico): add logging
+  if wandb.run is not None:
+    wandb.log({
+      "target_reached": goals_reached, 
+      "reached_step_hint": reached_step_hint,
+      "is_time_remaining": train_state['is_time_remaining']})
+            
+  if log_dir is not None:
     metrics_logger.append_scalar_metrics(
         {'score': train_state['accumulated_submission_time']},
         global_step=global_step,
@@ -587,7 +584,6 @@ def score_submission_on_workload(workload: spec.Workload,
   init_optimizer_state = submission_module.init_optimizer_state
   update_params = submission_module.update_params
   data_selection = submission_module.data_selection
-  prepare_for_eval = getattr(submission_module, 'prepare_for_eval', None)
   try:
     global_batch_size = submission_module.get_batch_size(workload_name)
   except ValueError:
@@ -619,8 +615,7 @@ def score_submission_on_workload(workload: spec.Workload,
       raise ValueError(
           'Must provide a tuning search space JSON file when using external '
           'tuning.')
-    
-    # (nico) halton.generate_search always produce the same list, but order may vary
+  
     with open(tuning_search_space, 'r', encoding='UTF-8') as search_space_file:
       if not FLAGS.fixed_space:
         # (nico) original code
@@ -631,10 +626,18 @@ def score_submission_on_workload(workload: spec.Workload,
         tuning_search_space = fixed_space.generate_search(
             json.load(search_space_file), num_tuning_trials)
     
-    tuning_search_space.sort()
+    # (nico) check for parallel trials
+    if trial_index is not None:
+      if trial_index < 1 or trial_index > num_tuning_trials:
+        raise ValueError(
+          'trial_index should be in [1, num_tuning_trials], recieved: {}'.format(
+            trial_index))
     
-    all_timings = []  # (nico)
-    all_metrics = []  # (nico)
+    # (nico) halton.generate_search always produce the same list, but order may vary
+    tuning_search_space.sort()
+
+    all_timings = []
+    all_metrics = []
     tuning_search_space_iter = itertools.islice(
         enumerate(tuning_search_space), hparam_start_index, hparam_end_index)
     for hi, hyperparameters in tuning_search_space_iter:
@@ -675,7 +678,6 @@ def score_submission_on_workload(workload: spec.Workload,
                                      data_dir, imagenet_v2_data_dir,
                                      init_optimizer_state,
                                      update_params, data_selection,
-                                     prepare_for_eval,
                                      hyperparameters,
                                      rng_seed,
                                      rng,
@@ -689,12 +691,12 @@ def score_submission_on_workload(workload: spec.Workload,
       # # (nico): original
       # all_timings[hi] = timing
       # all_metrics[hi] = metrics
-      
+    
       logging.info(f'Tuning trial {hi + 1}/{num_tuning_trials}')
       logging.info(f'Hyperparameters: {tuning_search_space[hi]}')
-      logging.info(f'Metrics: {all_metrics[hi]}')
-      logging.info(f'Timing: {all_timings[hi]}')
-      num_evals = len(all_metrics[hi]['eval_results'])
+      logging.info(f'Metrics: {metrics}')
+      logging.info(f'Timing: {timing}')
+      num_evals = len(metrics['eval_results'])
       logging.info(f'Total number of evals: {num_evals}')
       logging.info('=' * 20)
     score = min(all_timings)
@@ -722,16 +724,10 @@ def score_submission_on_workload(workload: spec.Workload,
 
 
 def main(_):
-
-  if FLAGS.framework == 'pytorch':
-    if FLAGS.halve_CUDA_mem:
-      torch.cuda.set_per_process_memory_fraction(0.5, device=DEVICE)
-    if FLAGS.allow_tf32:
-      torch.backends.cuda.matmul.allow_tf32 = True
-      torch.backends.cudnn.allow_tf32 = True
-    else:
-      torch.backends.cuda.matmul.allow_tf32 = False
-      torch.backends.cudnn.allow_tf32 = False
+  # (nico): make deterministic
+  if FLAGS.torch_deterministic:
+    torch.use_deterministic_algorithms(True)
+    torch.backends.cudnn.benchmark = True
 
   if FLAGS.profile:
     profiler = Profiler()
