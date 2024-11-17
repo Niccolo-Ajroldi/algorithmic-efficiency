@@ -315,14 +315,17 @@ def update_params(workload: spec.Workload,
   del eval_results
 
   lawa = optimizer_state['lawa']
+  current_model = current_param_container
+  
+  print(f"Step = {global_step}")
 
   # Discard average and load previous params
   if lawa.tmp_params is not None:
+    print("Discarding average and loading previous params")
     for p, p_old in zip(current_model.parameters(), lawa.tmp_params):
       p.data.copy_(p_old.data)
     lawa.tmp_params = None
 
-  current_model = current_param_container
   current_model.train()
   optimizer_state['optimizer'].zero_grad()
 
@@ -365,6 +368,7 @@ def update_params(workload: spec.Workload,
 
   # Update LAWA
   if global_step >= lawa.start_step and global_step % lawa.every_step == 0:
+    print("Appending to LAWA queue")
     lawa.append(current_model.parameters())
 
   return (optimizer_state, current_param_container, new_model_state)
@@ -381,17 +385,21 @@ def prepare_for_eval(workload: spec.Workload,
                      global_step: int,
                      rng: spec.RandomState) -> spec.UpdateReturn:
   
+  print("Prepping for eval")
+  
   lawa = optimizer_state['lawa']
   current_model = current_param_container
   
-  if global_step < lawa.start_step:  
+  if global_step < lawa.start_step or not lawa.full():
     return (optimizer_state, current_model, model_state)
 
   # Save parameters for next step
+  print("Saving tmp params")
   lawa.store_tmp_params(current_model.parameters())
 
   # Load avg into model
-  if lawa.full():
+  print("Loading avg into model params")
+  if lawa.full():  # redundant
     avg = lawa.avg()
     for p, p_avg in zip(current_model.parameters(), avg):
       p.data = p_avg.to(p.device).clone()

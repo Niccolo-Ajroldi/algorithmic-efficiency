@@ -305,7 +305,9 @@ class MetricLogger(object):
       self._tb_metric_writer = metric_writers.create_default_writer(events_dir)
       if wandb is not None and self.use_wandb:
         wandb.init(
-            dir=events_dir, tags=[flags.FLAGS.workload, flags.FLAGS.framework])
+            project='algoperf_lawa',
+            dir=events_dir, 
+            tags=[flags.FLAGS.workload, flags.FLAGS.framework])
         wandb.config.update(configs)
         wandb.config.update(hyperparameters._asdict())
 

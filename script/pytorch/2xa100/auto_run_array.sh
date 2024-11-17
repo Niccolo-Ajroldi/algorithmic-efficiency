@@ -20,7 +20,7 @@ study=$6
 num_tuning_trials=$7
 rng_seed=$8
 allow_tf_32=$9
-halve_cuda_mem=$10
+halve_cuda_mem=${10}
 
 workload_list=(
   criteo1tb
