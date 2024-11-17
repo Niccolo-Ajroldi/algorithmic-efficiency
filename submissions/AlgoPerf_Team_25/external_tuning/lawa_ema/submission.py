@@ -231,11 +231,11 @@ class LAWA():
     self.steps_per_call = math.ceil(steps_per_eval * hyperparameters.lawa_inner_steps_frac)
 
   def update_prev(self, params):
-    self.prev_params = [p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params]
+    self.prev_params = [p.detach().cpu() for p in params]
 
   def ema_update(self, params):
     if self.ema is None:
-      self.ema = [p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params]      
+      self.ema = [p.detach().cpu() for p in params]      
       return
     beta = self.beta
     for p_ema, p in zip(self.ema, params):
@@ -313,7 +313,7 @@ def update_params(workload: spec.Workload,
   # Discard average and load previous params
   if local_step > lawa_start_step:
     for p,p_old in zip(current_model.parameters(), lawa.prev_params):
-      p.data = p_old.to(p.device).clone(memory_format=torch.preserve_format)
+      p.data.copy_(p_old.data)
 
   # Internal loop
   for _ in range(steps_per_call):
@@ -348,6 +348,7 @@ def update_params(workload: spec.Workload,
       n_valid_examples = dist_nn.all_reduce(n_valid_examples)
     loss = summed_loss / n_valid_examples
 
+    del(logits_batch)
     loss.backward()
 
     optimizer_state['optimizer'].step()
@@ -367,7 +368,7 @@ def update_params(workload: spec.Workload,
 
     # Load avg into model
     for p, p_avg in zip(current_model.parameters(), lawa.ema):
-      p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
+      p.data.copy_(p_avg.data)
 
   return (optimizer_state, current_model, new_model_state)
 

@@ -234,10 +234,10 @@ class LAWA():
     self.steps_per_call = math.ceil(steps_per_eval * hyperparameters.lawa_inner_steps_frac)
 
   def update_prev(self, params):
-    self.prev_params = [p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params]
+    self.prev_params = [p.detach().cpu() for p in params]
 
   def queue_append(self, params):
-    self.queue.append([p.detach().clone(memory_format=torch.preserve_format).cpu() for p in params])
+    self.queue.append([p.detach().cpu() for p in params])
 
   def queue_full(self):
     return (len(self.queue)==self.maxlen)
@@ -246,7 +246,7 @@ class LAWA():
     k = float(self.maxlen)
 
     # Initialize avg with first element of the queue
-    q_avg = [p.detach().clone().cpu().div_(k) for p in self.queue[0]]
+    q_avg = [p.clone().div_(k) for p in self.queue[0]] # self.queue[0] is already on cpu!
 
     # Loop over queue and update avg
     for chkpts in islice(self.queue, 1, None):
@@ -324,7 +324,7 @@ def update_params(workload: spec.Workload,
   # Discard average and load previous params
   if local_step > lawa_start_step and lawa.queue_full():
     for p,p_old in zip(current_model.parameters(), lawa.prev_params):
-      p.data = p_old.to(p.device).clone(memory_format=torch.preserve_format)
+      p.data.copy_(p_old.data)
 
   # Internal loop
   for _ in range(steps_per_call):
@@ -359,6 +359,7 @@ def update_params(workload: spec.Workload,
       n_valid_examples = dist_nn.all_reduce(n_valid_examples)
     loss = summed_loss / n_valid_examples
 
+    del(logits_batch)
     loss.backward()
 
     optimizer_state['optimizer'].step()
@@ -380,7 +381,7 @@ def update_params(workload: spec.Workload,
     if lawa.queue_full():
       avg = lawa.queue_avg()
       for p, p_avg in zip(current_model.parameters(), avg):
-        p.data = p_avg.to(p.device).clone(memory_format=torch.preserve_format)
+        p.data.copy_(p_avg.data)
 
   return (optimizer_state, current_model, new_model_state)
 
