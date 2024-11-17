@@ -1,0 +1,43 @@
+# Define variables
+LOGS_DIR=/fast/najroldi/logs/algoperf
+EXE=/home/najroldi/algorithmic-efficiency/script/pytorch/8xa100/auto_run_array.sh
+
+num_jobs=8
+
+# Job specific vars
+workload_or_id=$(Process)
+# workload_or_id=imagenet_vit
+framework=pytorch
+submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
+search_space=prize_qualification_baselines/external_tuning/tuning_search_space.json
+name=a100_x8_noTF32_10
+study=1
+num_tuning_trials=1
+rng_seed=96
+allow_tf_32=0
+
+# Args
+executable = $(EXE)
+arguments = \
+  $(workload_or_id) \
+  $(framework) \
+  $(submission) \
+  $(search_space) \
+  $(name) \
+  $(study) \
+  $(num_tuning_trials) \
+  $(rng_seed) \
+  $(allow_tf_32)
+
+# Logs
+error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
+output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
+log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
+
+# Specs
+request_memory = 700000
+request_cpus = 36
+request_gpus = 8
+requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-40GB")
+
+queue $(num_jobs)
