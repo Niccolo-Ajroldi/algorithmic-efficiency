@@ -51,6 +51,7 @@ from algorithmic_efficiency.pytorch_utils import pytorch_init
 from algorithmic_efficiency.pytorch_utils import pytorch_setup
 from algorithmic_efficiency.pytorch_utils import sync_ddp_time
 from algorithmic_efficiency.workloads import workloads
+from algorithmic_efficiency import fixed_space
 
 # disable only for deepspeech if it works fine for other workloads.
 os.environ['XLA_FLAGS'] = '--xla_gpu_enable_triton_gemm=false'

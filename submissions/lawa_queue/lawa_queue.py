@@ -368,7 +368,7 @@ def update_params(workload: spec.Workload,
 
   # Update LAWA
   if global_step >= lawa.start_step and global_step % lawa.every_step == 0:
-    print("Appending to LAWA queue")
+    # print("Appending to LAWA queue")
     lawa.append(current_model.parameters())
 
   return (optimizer_state, current_param_container, new_model_state)
