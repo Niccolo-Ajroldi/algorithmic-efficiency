@@ -19,8 +19,5 @@
   },
   "warmup_factor": {
     "feasible_points": [0.02]
-  },
-  "seed": {
-    "feasible_points": [100, 200, 300]
   }
 }

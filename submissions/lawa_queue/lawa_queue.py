@@ -248,6 +248,7 @@ class LAWA():
     return len(self.queue) == self.maxlen
 
   def avg(self):
+    """Returns the average tensor, which lays on CPU."""
     k = float(self.maxlen)
 
     # Initialize avg with first element of the queue
@@ -368,7 +369,6 @@ def update_params(workload: spec.Workload,
 
   # Update LAWA
   if global_step >= lawa.start_step and global_step % lawa.every_step == 0:
-    # print("Appending to LAWA queue")
     lawa.append(current_model.parameters())
 
   return (optimizer_state, current_param_container, new_model_state)
@@ -394,15 +394,13 @@ def prepare_for_eval(workload: spec.Workload,
     return (optimizer_state, current_model, model_state)
 
   # Save parameters for next step
-  # print("Saving tmp params")
   lawa.store_tmp_params(current_model.parameters())
 
   # Load avg into model
-  # print("Loading avg into model params")
   if lawa.full():  # redundant
-    avg = lawa.avg()
+    avg = lawa.avg()  # computes avg on CPU
     for p, p_avg in zip(current_model.parameters(), avg):
-      p.data = p_avg.to(p.device).clone()
+      p.data = p_avg.to(p.device).clone()  # move avg to GPU
 
   return (optimizer_state, current_model, model_state)
 

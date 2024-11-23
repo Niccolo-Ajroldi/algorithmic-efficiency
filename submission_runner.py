@@ -175,15 +175,24 @@ flags.DEFINE_integer(
 flags.DEFINE_boolean(
     'halve_CUDA_mem',
     False,
-    'Halve the available VRAM.')
+    'Halve the available VRAM.')  # (nico)
 flags.DEFINE_boolean(
     'allow_tf32',
     False,
-    'Allow TF32 on Ampere.')
+    'Allow TF32 on Ampere.')  # (nico)
 flags.DEFINE_integer(
     'custom_eval_period_time_sec',
     None,
-    '')
+    '')  # (nico)
+flags.DEFINE_integer(
+    'cluster_id',
+    None,
+    'Cluster JOB ID.')  # (nico)
+flags.DEFINE_integer(
+    'process_id',
+    None,
+    'Process JOB ID.')  # (nico)
+
 FLAGS = flags.FLAGS
 USE_PYTORCH_DDP, RANK, DEVICE, N_GPUS = pytorch_setup()
 
@@ -361,7 +370,8 @@ def train_once(
       train_state['test_goal_reached'])
   while train_state['is_time_remaining'] and \
       not goals_reached and \
-      not train_state['training_complete']:
+      not train_state['training_complete'] and \
+      global_step <= workload.step_hint:  # (nico): running on faster Hardware, need this!
 
     step_rng = prng.fold_in(rng, global_step)
     data_select_rng, update_rng, prep_eval_rng, eval_rng = \
@@ -470,9 +480,12 @@ def train_once(
             # train_state['test_goal_reached'] = (
             #     workload.has_reached_test_target(latest_eval_result) or
             #     train_state['test_goal_reached'])
-            goals_reached = (
-                train_state['validation_goal_reached'] and
-                train_state['test_goal_reached'])
+            # (nico): stop at valid target reached
+            # goals_reached = (
+            #     train_state['validation_goal_reached'] and
+            #     train_state['test_goal_reached'])
+            goals_reached = train_state['validation_goal_reached']
+            
             # Save last eval time.
             eval_end_time = get_time()
             train_state['last_eval_time'] = eval_end_time
@@ -693,9 +706,14 @@ def score_submission_on_workload(workload: spec.Workload,
       
       logging.info(f'Tuning trial {hi + 1}/{num_tuning_trials}')
       logging.info(f'Hyperparameters: {tuning_search_space[hi]}')
-      logging.info(f'Metrics: {all_metrics[hi]}')
-      logging.info(f'Timing: {all_timings[hi]}')
-      num_evals = len(all_metrics[hi]['eval_results'])
+      # (nico): modified
+      logging.info(f'Metrics: {metrics}')
+      logging.info(f'Timing: {timing}')
+      num_evals = len(metrics['eval_results'])
+      # # (nico): original
+      # logging.info(f'Metrics: {all_metrics[hi]}')
+      # logging.info(f'Timing: {all_timings[hi]}')
+      # num_evals = len(all_metrics[hi]['eval_results'])
       logging.info(f'Total number of evals: {num_evals}')
       logging.info('=' * 20)
     score = min(all_timings)
