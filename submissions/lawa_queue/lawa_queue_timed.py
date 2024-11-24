@@ -15,6 +15,8 @@ from typing import Dict, Iterator, List, Tuple
 
 from collections import deque
 from itertools import islice
+import time
+import wandb
 
 from absl import logging
 import torch
@@ -24,8 +26,8 @@ import torch.distributed.nn as dist_nn
 from algorithmic_efficiency import spec
 from algorithmic_efficiency.pytorch_utils import pytorch_setup
 
-USE_PYTORCH_DDP = pytorch_setup()[0]
 
+USE_PYTORCH_DDP, RANK, _, _ = pytorch_setup()
 
 # Modified from github.com/pytorch/pytorch/blob/v1.12.1/torch/optim/adamw.py.
 class NAdamW(torch.optim.Optimizer):
@@ -320,12 +322,17 @@ def update_params(workload: spec.Workload,
   
   # print(f"Step = {global_step}")
 
-  # Discard average and load previous params
+  if RANK == 0:
+    timing = {}
+
   if lawa.tmp_params is not None:
-    # print("Discarding average and loading previous params")
+    if RANK == 0:
+      start_time = time.time()
     for p, p_old in zip(current_model.parameters(), lawa.tmp_params):
       p.data.copy_(p_old.data)
     lawa.tmp_params = None
+    if RANK == 0:
+      timing["timing/copy_tmp_params"] = time.time() - start_time
 
   current_model.train()
   optimizer_state['optimizer'].zero_grad()
@@ -369,7 +376,14 @@ def update_params(workload: spec.Workload,
 
   # Update LAWA
   if global_step >= lawa.start_step and global_step % lawa.every_step == 0:
+    if RANK == 0:
+      start_time = time.time()
     lawa.append(current_model.parameters())
+    if RANK == 0:
+      timing["timing/update_queue"] = time.time() - start_time
+  
+  if RANK == 0:
+    wandb.log(timing)
 
   return (optimizer_state, current_param_container, new_model_state)
 
@@ -387,6 +401,10 @@ def prepare_for_eval(workload: spec.Workload,
   
   # print("Prepping for eval")
   
+  if RANK == 0:
+    timing = {}
+    start_time = time.time()
+
   lawa = optimizer_state['lawa']
   current_model = current_param_container
   
@@ -400,9 +418,13 @@ def prepare_for_eval(workload: spec.Workload,
   if lawa.full():  # redundant
     avg = lawa.avg()  # computes avg on CPU
     for p, p_avg in zip(current_model.parameters(), avg):
-        p.data.copy_(p_avg.data)
+      p.data.copy_(p_avg.data)
       # p.data = p_avg.to(p.device).clone()  # move avg to GPU
 
+  if RANK == 0:
+    timing["timing/prepare_for_eval"] = time.time() - start_time
+    wandb.log(timing)
+  
   return (optimizer_state, current_model, model_state)
 
 

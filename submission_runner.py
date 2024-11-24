@@ -172,6 +172,9 @@ flags.DEFINE_integer(
     'Number of workers for ImageNet PyTorch evaluation data loaders.'
     'WARNING: Setting pytorch_eval_num_workers != 0, will result '
     'in incorrect evals currently, see issues/732.')
+flags.DEFINE_float('max_pct_of_global_steps',
+                   None,
+                   'Maximum number of update steps.')
 flags.DEFINE_boolean(
     'halve_CUDA_mem',
     False,
@@ -239,6 +242,7 @@ def train_once(
     rng: spec.RandomState,
     profiler: Profiler,
     max_global_steps: int = None,
+    max_pct_of_global_steps: float = None,  # (nico)
     log_dir: Optional[str] = None,
     save_checkpoints: Optional[bool] = True
 ) -> Tuple[spec.Timing, Dict[str, Any]]:
@@ -406,6 +410,10 @@ def train_once(
       train_state['training_complete'] = True
     global_step += 1
     if (max_global_steps is not None) and (global_step == max_global_steps):
+      train_state['training_complete'] = True
+    # (nico): train for a fixed pct of step_hint
+    if (max_pct_of_global_steps is not None) and \
+        (global_step / workload.step_hint >= max_pct_of_global_steps):
       train_state['training_complete'] = True
 
     train_step_end_time = get_time()
@@ -580,6 +588,7 @@ def score_submission_on_workload(workload: spec.Workload,
                                  tuning_ruleset: str,
                                  profiler: Optional[Profiler] = None,
                                  max_global_steps: Optional[int] = None,
+                                 max_pct_of_global_steps: Optional[float] = None,  # (nico)
                                  imagenet_v2_data_dir: Optional[str] = None,
                                  tuning_search_space: Optional[str] = None,
                                  num_tuning_trials: Optional[int] = None,
@@ -695,6 +704,7 @@ def score_submission_on_workload(workload: spec.Workload,
                                      rng,
                                      profiler,
                                      max_global_steps,
+                                     max_pct_of_global_steps,  # (nico)
                                      tuning_dir_name,
                                      save_checkpoints=save_checkpoints,)
       # (nico): modified
@@ -808,6 +818,7 @@ def main(_):
       tuning_ruleset=FLAGS.tuning_ruleset,
       profiler=profiler,
       max_global_steps=FLAGS.max_global_steps,
+      max_pct_of_global_steps=FLAGS.max_pct_of_global_steps,  # (nico)
       imagenet_v2_data_dir=FLAGS.imagenet_v2_data_dir,
       tuning_search_space=FLAGS.tuning_search_space,
       num_tuning_trials=FLAGS.num_tuning_trials,
