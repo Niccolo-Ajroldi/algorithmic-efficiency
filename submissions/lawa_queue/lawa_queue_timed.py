@@ -401,25 +401,24 @@ def prepare_for_eval(workload: spec.Workload,
   
   # print("Prepping for eval")
   
-  if RANK == 0:
-    timing = {}
-    start_time = time.time()
-
   lawa = optimizer_state['lawa']
   current_model = current_param_container
   
   if global_step < lawa.start_step or not lawa.full():
     return (optimizer_state, current_model, model_state)
 
+  if RANK == 0:
+    timing = {}
+    start_time = time.time()
+
   # Save parameters for next step
   lawa.store_tmp_params(current_model.parameters())
 
   # Load avg into model
   if lawa.full():  # redundant
-    avg = lawa.avg()  # computes avg on CPU
+    avg = lawa.avg()  # compute avg on CPU
     for p, p_avg in zip(current_model.parameters(), avg):
-      p.data.copy_(p_avg.data)
-      # p.data = p_avg.to(p.device).clone()  # move avg to GPU
+      p.data.copy_(p_avg.data)  # move avg to GPU
 
   if RANK == 0:
     timing["timing/prepare_for_eval"] = time.time() - start_time

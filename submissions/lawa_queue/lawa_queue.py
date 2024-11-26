@@ -317,12 +317,9 @@ def update_params(workload: spec.Workload,
 
   lawa = optimizer_state['lawa']
   current_model = current_param_container
-  
-  # print(f"Step = {global_step}")
 
   # Discard average and load previous params
   if lawa.tmp_params is not None:
-    # print("Discarding average and loading previous params")
     for p, p_old in zip(current_model.parameters(), lawa.tmp_params):
       p.data.copy_(p_old.data)
     lawa.tmp_params = None
@@ -385,8 +382,6 @@ def prepare_for_eval(workload: spec.Workload,
                      global_step: int,
                      rng: spec.RandomState) -> spec.UpdateReturn:
   
-  # print("Prepping for eval")
-  
   lawa = optimizer_state['lawa']
   current_model = current_param_container
   
@@ -398,10 +393,9 @@ def prepare_for_eval(workload: spec.Workload,
 
   # Load avg into model
   if lawa.full():  # redundant
-    avg = lawa.avg()  # computes avg on CPU
+    avg = lawa.avg()  # compute avg on CPU
     for p, p_avg in zip(current_model.parameters(), avg):
-        p.data.copy_(p_avg.data)
-      # p.data = p_avg.to(p.device).clone()  # move avg to GPU
+        p.data.copy_(p_avg.data)  # move avg to GPU
 
   return (optimizer_state, current_model, model_state)
 
