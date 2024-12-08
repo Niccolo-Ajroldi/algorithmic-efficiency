@@ -24,9 +24,9 @@
     "feasible_points": [0.0]
   },
   "lawa_every_pct": {
-    "feasible_points": [0.00002]
+    "feasible_points": [0.002]
   },
   "lawa_queue_len": {
-    "feasible_points": [5, 10, 20]
+    "feasible_points": [5]
   }
 }

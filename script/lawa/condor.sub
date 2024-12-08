@@ -18,9 +18,9 @@ framework=pytorch
 ## LAWA
 submission=submissions/lawa_queue/lawa_queue_non_blocking.py
 search_space=script/lawa/queue/lawa_trial_5_non_blocking.json
-num_tuning_trials=3
-study=1
-name=lawa_non_blocking_01
+num_tuning_trials=1
+study=3
+name=lawa_non_blocking_02
 rng_seed=$(study)
 allow_tf_32=1
 num_jobs=$(num_tuning_trials)
