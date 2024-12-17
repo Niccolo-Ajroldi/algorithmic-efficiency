@@ -16,11 +16,11 @@ framework=pytorch
 # num_jobs=$(num_tuning_trials)
 
 ## LAWA
-submission=submissions/lawa_queue/lawa_queue_non_blocking.py
-search_space=script/lawa/queue/lawa_trial_5_non_blocking.json
-num_tuning_trials=1
+submission=submissions/lawa_ema/lawa_ema.py
+search_space=script/lawa/ema/lawa_trial_5_tune_04.json
+num_tuning_trials=12
 study=3
-name=lawa_non_blocking_02
+name=lawa_ema_tune_06
 rng_seed=$(study)
 allow_tf_32=1
 num_jobs=$(num_tuning_trials)
