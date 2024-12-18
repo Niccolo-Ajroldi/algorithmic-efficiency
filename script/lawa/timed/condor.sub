@@ -1,38 +1,24 @@
 # Define variables
 LOGS_DIR=/fast/najroldi/logs/algoperf
-EXE=/home/najroldi/algorithmic-efficiency/script/lawa/auto_run.sh
+EXE=/home/najroldi/algorithmic-efficiency/script/lawa/timed/auto_run.sh
 
-workload=fastmri
 framework=pytorch
 
-# ## NadamW
-# submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
-# search_space=script/lawa/nadam/nadamw_trial_1.json
-# num_tuning_trials=1
-# study=1
-# name=nadamw_workers2_omp1_baseline_01
-# rng_seed=$(study)
-# allow_tf_32=1
-# num_jobs=$(num_tuning_trials)
-
 ## LAWA
-submission=submissions/lawa_queue/lawa_queue_timed.py
-search_space=script/lawa/queue/lawa_timed.json
-num_tuning_trials=1
+submission=submissions/lawa_ema/lawa_ema_timed.py
+search_space=script/lawa/ema/lawa_timed.json
 study=1
 name=lawa_queue_timed_01
 rng_seed=$(study)
 allow_tf_32=1
-num_jobs=$(num_tuning_trials)
+num_jobs=8
 
 # Args
 executable = $(EXE)
 arguments = \
-  $(workload) \
   $(framework) \
   $(submission) \
   $(search_space) \
-  $(num_tuning_trials) \
   $(study) \
   $(name) \
   $(rng_seed) \
