@@ -409,19 +409,30 @@ def prepare_for_eval(workload: spec.Workload,
 
   if RANK == 0:
     timing = {}
-    start_time = time.time()
+    start_time_prep = time.time()
+    start_time_store = time.time()
 
   # Save parameters for next step
   lawa.store_tmp_params(current_model.parameters())
 
-  # Load avg into model
-  if lawa.full():  # redundant
-    avg = lawa.avg()  # compute avg on CPU
-    for p, p_avg in zip(current_model.parameters(), avg):
-      p.data.copy_(p_avg.data)  # move avg to GPU
+  if RANK == 0:
+    timing["timing/prepare_for_eval_store"] = time.time() - start_time_store
+    start_time_compute_avg = time.time()
+
+  # Compute avg
+  avg = lawa.avg()  # compute avg on CPU
 
   if RANK == 0:
-    timing["timing/prepare_for_eval"] = time.time() - start_time
+    timing["timing/prepare_for_eval_compute_avg"] = time.time() - start_time_compute_avg
+    start_time_load_avg = time.time()
+
+  # Load avg into model
+  for p, p_avg in zip(current_model.parameters(), avg):
+    p.data.copy_(p_avg.data)  # move avg to GPU
+
+  if RANK == 0:
+    timing["timing/prepare_for_eval_load_avg"] = time.time() - start_time_load_avg
+    timing["timing/prepare_for_eval"] = time.time() - start_time_prep
     wandb.log(timing)
   
   return (optimizer_state, current_model, model_state)

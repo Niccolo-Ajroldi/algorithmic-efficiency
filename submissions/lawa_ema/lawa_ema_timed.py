@@ -404,14 +404,14 @@ def prepare_for_eval(workload: spec.Workload,
 
   if RANK == 0:
     timing["timing/prepare_for_eval_store"] = time.time() - start_time_store
-    start_time_load_ema = time.time()
+    start_time_load_avg = time.time()
 
-  # Load ema into model
+  # Load avg into model
   for p, p_avg in zip(current_model.parameters(), lawa.ema):
       p.data.copy_(p_avg.data)  # move avg to GPU
 
   if RANK == 0:
-    timing["timing/prepare_for_eval_load_ema"] = time.time() - start_time_load_ema
+    timing["timing/prepare_for_eval_load_avg"] = time.time() - start_time_load_avg
     timing["timing/prepare_for_eval"] = time.time() - start_time_prep
     wandb.log(timing)
 
