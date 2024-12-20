@@ -318,20 +318,18 @@ class Workload(metaclass=abc.ABCMeta):
                  imagenet_v2_data_dir: Optional[str],
                  global_step: int) -> Dict[str, float]:
     """Run a full evaluation of the model."""
-    # (nico): skip eval on test
     eval_metrics = {}
-    if False:
-      logging.info('Evaluating on the training split.')
-      train_metrics = self._eval_model_on_split(
-          split='eval_train',
-          num_examples=self.num_eval_train_examples,
-          global_batch_size=global_batch_size,
-          params=params,
-          model_state=model_state,
-          rng=rng,
-          data_dir=data_dir,
-          global_step=global_step)
-      eval_metrics = {'train/' + k: v for k, v in train_metrics.items()}
+    logging.info('Evaluating on the training split.')
+    train_metrics = self._eval_model_on_split(
+        split='eval_train',
+        num_examples=self.num_eval_train_examples,
+        global_batch_size=global_batch_size,
+        params=params,
+        model_state=model_state,
+        rng=rng,
+        data_dir=data_dir,
+        global_step=global_step)
+    eval_metrics = {'train/' + k: v for k, v in train_metrics.items()}
     # We always require a validation set.
     logging.info('Evaluating on the validation split.')
     validation_metrics = self._eval_model_on_split(
