@@ -2,7 +2,7 @@
 LOGS_DIR=/fast/najroldi/logs/algoperf
 EXE=/home/najroldi/algorithmic-efficiency/script/lawa/auto_run.sh
 
-workload=fastmri
+workload=librispeech_deepspeech
 framework=pytorch
 
 # ## NadamW
@@ -16,11 +16,11 @@ framework=pytorch
 # num_jobs=$(num_tuning_trials)
 
 ## LAWA
-submission=submissions/lawa_queue/lawa_queue_timed.py
-search_space=script/lawa/queue/lawa_timed.json
-num_tuning_trials=1
-study=1
-name=lawa_queue_timed_01
+submission=submissions/lawa_ema/lawa_ema.py
+search_space=script/lawa/ema/lawa_trial_5_tune_06.json
+num_tuning_trials=3
+study=3
+name=lawa_ema_tune_12
 rng_seed=$(study)
 allow_tf_32=1
 num_jobs=$(num_tuning_trials)
@@ -50,7 +50,9 @@ request_memory = 500000
 request_cpus = 36
 request_gpus = 4
 requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-40GB")
+
 # requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB")
 # requirements = (TARGET.CUDACapability >= 8.0)
+# requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB") && (TARGET.Machine != "g102.internal.cluster.is.localnet")
 
 queue $(num_jobs)

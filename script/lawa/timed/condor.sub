@@ -5,10 +5,10 @@ EXE=/home/najroldi/algorithmic-efficiency/script/lawa/timed/auto_run.sh
 framework=pytorch
 
 ## LAWA
-submission=submissions/lawa_ema/lawa_ema_timed.py
+submission=submissions/lawa_ema/lawa_ema.py
 search_space=script/lawa/ema/lawa_timed.json
 study=1
-name=lawa_queue_timed_01
+name=lawa_ema_timed_01
 rng_seed=$(study)
 allow_tf_32=1
 num_jobs=8
