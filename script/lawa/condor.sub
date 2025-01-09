@@ -2,25 +2,25 @@
 LOGS_DIR=/fast/najroldi/logs/algoperf
 EXE=/home/najroldi/algorithmic-efficiency/script/lawa/auto_run.sh
 
-workload=imagenet_vit
+workload=librispeech_deepspeech
 framework=pytorch
 
 # ## NadamW
-# submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget_no_decay.py
-# search_space=script/lawa/nadam/nadamw_trial_5.json
-# num_tuning_trials=1
-# study=3
-# name=nadamw_no_decay_01
+# submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
+# search_space=script/lawa/nadam/nadamw_trial_5_lr_sweep_2.json
+# num_tuning_trials=6
+# study=1
+# name=nadamw_lr_sweep_03
 # rng_seed=$(study)
 # allow_tf_32=1
 # num_jobs=$(num_tuning_trials)
 
 ## LAWA
-submission=submissions/lawa_queue/lawa_queue_no_decay.py
-search_space=script/lawa/queue/lawa_trial_2_best_no_burnin.json
-num_tuning_trials=1
+submission=submissions/lawa_queue/lawa_queue.py
+search_space=script/lawa/queue/lawa_trial_5_lr_sweep_2.json
+num_tuning_trials=6
 study=1
-name=lawa_queue_no_decay_01
+name=lawa_queue_lr_sweep_03
 rng_seed=$(study)
 allow_tf_32=1
 num_jobs=$(num_tuning_trials)
@@ -51,8 +51,8 @@ request_cpus = 36
 request_gpus = 4
 # requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-40GB")
 
-# requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB")
+requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB")
 # requirements = (TARGET.CUDACapability >= 8.0)
-requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB") && (TARGET.Machine != "g102.internal.cluster.is.localnet")
+# requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB") && (TARGET.Machine != "g102.internal.cluster.is.localnet")
 
 queue $(num_jobs)
