@@ -210,7 +210,10 @@ flags.DEFINE_boolean(
     'run_until_the_end',
     False,
     'Run the workload until global_step==step_hint.')  # (nico)
-
+flags.DEFINE_integer(
+    'eval_every_n_steps',
+    None,
+    'Eval every n steps, replaces timed eval.')  # (nico)
 FLAGS = flags.FLAGS
 USE_PYTORCH_DDP, RANK, DEVICE, N_GPUS = pytorch_setup()
 
@@ -447,8 +450,14 @@ def train_once(
       eval_period_time_sec = FLAGS.custom_eval_period_time_sec
       
     # Check if submission is eligible for an untimed eval.
-    if ((train_step_end_time - train_state['last_eval_time']) >=
-        eval_period_time_sec or train_state['training_complete']):
+    is_eval_time = False
+    if FLAGS.eval_every_n_steps is None:  # original logic
+      is_eval_time = ((train_step_end_time - train_state['last_eval_time']) >=
+      eval_period_time_sec or train_state['training_complete'])
+    else:  # (nico): eval every n steps
+      is_eval_time = (global_step % FLAGS.eval_every_n_steps == 0 or
+                      train_state['training_complete'])
+    if is_eval_time:
 
       # Prepare for evaluation (timed).
       if prepare_for_eval is not None:
