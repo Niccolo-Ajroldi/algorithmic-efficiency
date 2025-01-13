@@ -130,9 +130,20 @@ flags.DEFINE_boolean(
     True,
     'Whether to save any intermediate checkpoints. '
     'If False, it will only keep the latest checkpoint.')
-flags.DEFINE_boolean('resume_last_run',
-                     None,
-                     'Whether to resume the experiment from its last run.')
+flags.DEFINE_boolean(
+    'resume_last_run',
+    None,
+    'Whether to resume the experiment from its last run.'
+    'If resume_experiment_name is not specified, it resumes from '
+    'experiment_dir/experiment_name/workload/trial.'
+    'If resume_experiment_name is specified, it resumes from '
+    'experiment_dir/resume_experiment_name.')
+flags.DEFINE_string(
+    'resume_experiment_name',
+    None,
+    'The name of the experiment from which resuming. '
+    'It should be smth like resume_exp_name/workload/trial. '
+    'See --resume_last_run for how to use it.')
 flags.DEFINE_boolean(
     'append_timestamp',
     False,
@@ -248,6 +259,7 @@ def train_once(
     max_global_steps: int = None,
     max_pct_of_global_steps: float = None,  # (nico)
     log_dir: Optional[str] = None,
+    resume_dir: Optional[str] = None,  # (nico)
     save_checkpoints: Optional[bool] = True
 ) -> Tuple[spec.Timing, Dict[str, Any]]:
   _reset_cuda_mem()
@@ -338,7 +350,6 @@ def train_once(
   # Loggers and checkpoint setup.
   logging.info('Initializing checkpoint and logger.')
   if log_dir is not None:
-    # If the checkpoint exists, load from the checkpoint.
     (optimizer_state,
      model_params,
      model_state,
@@ -354,7 +365,8 @@ def train_once(
          eval_results,
          global_step,
          preemption_count,
-         checkpoint_dir=log_dir)
+         checkpoint_dir=resume_dir  # (nico): resume_dir instead of log_dir here!
+    )
     meta_file_name = os.path.join(log_dir, f'meta_data_{preemption_count}.json')
     logging.info(f'Saving meta data to {meta_file_name}.')
     meta_data = logger_utils.get_meta_data(workload, rng_seed)
@@ -602,6 +614,7 @@ def score_submission_on_workload(workload: spec.Workload,
                                  num_tuning_trials: Optional[int] = None,
                                  trial_index: Optional[int] = None,
                                  log_dir: Optional[str] = None,
+                                 resume_dir: Optional[str] = None,  # (nico)
                                  save_checkpoints: Optional[bool] = True,
                                  hparam_start_index: Optional[bool] = None,
                                  hparam_end_index: Optional[bool] = None,
@@ -693,6 +706,11 @@ def score_submission_on_workload(workload: spec.Workload,
         logging.info(f'Creating tuning directory at {tuning_dir_name}.')
         logger_utils.makedir(tuning_dir_name)
 
+        # (nico): in case we are resuming from the same exp, 
+        # we also resume from the same trial (original resume logic)
+        if resume_dir == log_dir:
+          resume_dir = tuning_dir_name  # add 'trial_{hi + 1}'
+
         # If existing hyperparameter exists, use saved
         # hyperparameters for consistency.
         hyperparameters = logger_utils.write_hparams(hyperparameters,
@@ -714,6 +732,7 @@ def score_submission_on_workload(workload: spec.Workload,
                                      max_global_steps,
                                      max_pct_of_global_steps,  # (nico)
                                      tuning_dir_name,
+                                     resume_dir,  # (nico)
                                      save_checkpoints=save_checkpoints,)
       # (nico): modified
       all_timings.append(timing)
@@ -754,6 +773,7 @@ def score_submission_on_workload(workload: spec.Workload,
           data_dir, imagenet_v2_data_dir,
           init_optimizer_state, update_params, data_selection,
           None, rng_seed, rng, profiler, max_global_steps, log_dir,
+          resume_dir,  # (nico)
           save_checkpoints=save_checkpoints)
   return score
 
@@ -811,12 +831,15 @@ def main(_):
   experiment_name = FLAGS.experiment_name
   if experiment_name and FLAGS.append_timestamp:
     experiment_name += datetime.datetime.now().strftime('-%Y-%m-%d-%H-%M-%S')
-  logging_dir_path = logger_utils.get_log_dir(FLAGS.experiment_dir,
-                                              FLAGS.workload,
-                                              FLAGS.framework,
-                                              experiment_name,
-                                              FLAGS.resume_last_run,
-                                              FLAGS.overwrite)
+  logging_dir_path, resume_dir_path = logger_utils.get_log_dir(
+    FLAGS.experiment_dir,
+    FLAGS.workload,
+    FLAGS.framework,
+    experiment_name,
+    FLAGS.resume_last_run,
+    FLAGS.resume_experiment_name,
+    FLAGS.overwrite)
+  
 
   score = score_submission_on_workload(
       workload=workload,
@@ -832,6 +855,7 @@ def main(_):
       num_tuning_trials=FLAGS.num_tuning_trials,
       trial_index=FLAGS.trial_index,
       log_dir=logging_dir_path,
+      resume_dir=resume_dir_path,  # (nico)
       save_checkpoints=FLAGS.save_checkpoints,
       hparam_start_index=FLAGS.hparam_start_index,
       hparam_end_index=FLAGS.hparam_end_index,

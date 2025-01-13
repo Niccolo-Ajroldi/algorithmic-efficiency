@@ -42,6 +42,7 @@ def get_log_dir(
     framework: str,
     experiment_name: str,
     resume_last_run: bool,
+    resume_experiment_name: str,
     overwrite: bool,
 ) -> Optional[str]:
   # Construct path to experiment workload directory.
@@ -54,24 +55,21 @@ def get_log_dir(
                                    experiment_name,
                                    workload_dir_name)
 
-  if os.path.exists(experiment_path):
+  if os.path.exists(experiment_path) and not resume_last_run:
     if overwrite:
       logging.info(
           f'Removing existing experiment directory {experiment_path} because '
           '--overwrite was set.')
       if RANK == 0:
         shutil.rmtree(experiment_path)
-    elif resume_last_run:
-      logging.info(
-          f'Resuming from experiment directory {experiment_path} because '
-          '--resume_last_run was set.')
     else:
-      if RANK == 0:
-        resume = input(
-            'Found existing experiment dir with the same name: {}. Do you wish '
-            'to resume training from this dir? [y/N]:'.format(experiment_path))
-        if resume.lower() != 'y':
-          sys.exit()
+      raise FileExistsError(f'Found existing directory: {experiment_path}.')
+
+  resume_path = experiment_path  # default to avoid err in restore_checkpoints
+  if resume_last_run:
+    if resume_experiment_name is not None:
+      resume_path = os.path.join(experiment_dir, resume_experiment_name)
+    logging.info(f'Resuming from directory {resume_path}.')
 
   if USE_PYTORCH_DDP:
     try:
@@ -80,7 +78,7 @@ def get_log_dir(
       sys.exit()
   logging.info(f'Creating experiment directory at {experiment_path}.')
   makedir(experiment_path)
-  return experiment_path
+  return experiment_path, resume_path
 
 
 def write_hparams(hparams: spec.Hyperparameters,
