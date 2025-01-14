@@ -215,6 +215,10 @@ flags.DEFINE_integer(
     'eval_every_n_steps',
     None,
     'Eval every n steps, replaces timed eval.')  # (nico)
+flags.DEFINE_boolean(
+    'deterministic',
+    False,
+    'Deterministic mode for PyTorch.')  # (nico)
 FLAGS = flags.FLAGS
 USE_PYTORCH_DDP, RANK, DEVICE, N_GPUS = pytorch_setup()
 
@@ -243,6 +247,14 @@ def _reset_cuda_mem():
     gc.collect()
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
+  
+  if FLAGS.deterministic:
+    if FLAGS.framework == 'pytorch':
+      torch.use_deterministic_algorithms(True)
+      os.environ["CUBLAS_WORKSPACE_CONFIG"]=":4096:8"
+      torch.backends.cudnn.benchmark = False
+    else:
+      raise ValueError('Deterministic mode is only supported in PyTorch.')
 
 
 def train_once(
@@ -491,6 +503,12 @@ def train_once(
       train_state['is_time_remaining'] = (
           train_state['accumulated_submission_time'] < max_allowed_runtime_sec)
 
+      if RANK==0 and wandb is not None and FLAGS.use_wandb:
+        wandb.log({
+          "global_step": global_step,
+          "lr": optimizer_state['optimizer'].param_groups[0].get("lr", float("NaN"))
+        })
+      
       # Eval if time is remaining (untimed).
       if train_state['is_time_remaining']:
 
@@ -557,10 +575,6 @@ def train_once(
                   preemption_count=preemption_count,
                   is_eval=True,
               )
-              if wandb is not None and FLAGS.use_wandb:
-                wandb.log({
-                  "lr": optimizer_state['optimizer'].param_groups[0].get("lr", float("NaN"))
-                })
               if save_checkpoints:
                 checkpoint_utils.save_checkpoint(
                     framework=FLAGS.framework,

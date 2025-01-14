@@ -11,11 +11,11 @@ export DATA_DIR=/fast/najroldi/data
 export TMPDIR=/fast/najroldi/tmp
 
 # Job specific vars
-workload_or_id=ogbg
+workload_or_id=fastmri
 framework=pytorch
-submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
+submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget_sync_input_queue.py
 search_space=script/debug/debug.json
-name=resume_debug_01
+# name=test_01
 study=1
 num_tuning_trials=1
 rng_seed=96
@@ -62,8 +62,8 @@ dataset=${workload_to_dataset[$workload]}
 
 # Experiment name
 # experiment_name="${name}_${workload}_${framework}"
-experiment_name=resume_debug_02
-resume_experiment_name="resume_debug_01/${workload}_pytorch/trial_1"
+experiment_name=test_51
+resume_experiment_name="test_50/${workload}_pytorch/trial_1/checkpoint_9"
 resume_last_run=True
 
 # Librispeech tokenizer path
@@ -92,10 +92,10 @@ fi
 
 # Execute python script
 torchrun \
-  --redirects 1:0,2:0,3:0,4:0,5:0,6:0,7:0 \
+  --redirects 1:0,2:0,3:0 \
   --standalone \
   --nnodes=1 \
-  --nproc_per_node=8 \
+  --nproc_per_node=4 \
   $CODE_DIR/submission_runner.py \
   --workload=$workload \
   --framework=$framework \
@@ -117,9 +117,10 @@ torchrun \
   --torch_compile=True \
   --allow_tf32=$allow_tf_32_flag \
   --halve_CUDA_mem=$halve_cuda_mem_flag \
-  --pytorch_eval_num_workers=$eval_num_workers
-
-  # --use_wandb
+  --pytorch_eval_num_workers=$eval_num_workers \
+  --use_wandb \
+  --deterministic=True \
+  --eval_every_n_steps=1
 
 
   # --trial_index=2 \

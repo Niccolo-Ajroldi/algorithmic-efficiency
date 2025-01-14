@@ -15,6 +15,7 @@ from algorithmic_efficiency import spec
 from algorithmic_efficiency.pytorch_utils import pytorch_setup
 
 USE_PYTORCH_DDP = pytorch_setup()[0]
+# RANK = pytorch_setup()[1]
 
 
 # Modified from github.com/pytorch/pytorch/blob/v1.12.1/torch/optim/adamw.py.
@@ -189,6 +190,37 @@ def nadamw(params: List[Tensor],
     exp_avg.sub_(grad, alpha=1 - beta1).div_(beta1)
 
 
+class WarmCosine(object):
+  def __init__(self, optimizer, lr_min, lr_max, warmup_steps, T):
+    self.optimizer = optimizer
+    self.lr_min = lr_min
+    self.lr_max = lr_max
+    self.warmup_steps = warmup_steps
+    self.T = T
+    self.t = 0
+
+  def schedule(self, t):
+    if t <= self.warmup_steps:
+      return self.lr_min + (self.lr_max-self.lr_min)/self.warmup_steps * t
+    elif t <= self.T:
+      return self.lr_min + 0.5 * (self.lr_max-self.lr_min) * (1 + math.cos((t-self.warmup_steps) * math.pi / (self.T-self.warmup_steps)))
+    return self.lr_min
+
+  def step(self):
+    self.t += 1
+    # get LR for this step
+    lr = self.schedule(self.t)
+    # set LR in optimizer
+    for group in self.optimizer.param_groups:
+      group["lr"] = lr
+
+  def state_dict(self):
+    return {key: value for key, value in self.__dict__.items() if key != "optimizer"}
+
+  def load_state_dict(self, state_dict):
+    self.__dict__.update(state_dict)
+
+
 def init_optimizer_state(workload: spec.Workload,
                          model_params: spec.ParameterContainer,
                          model_state: spec.ModelAuxiliaryState,
@@ -209,19 +241,14 @@ def init_optimizer_state(workload: spec.Workload,
               weight_decay=hyperparameters.weight_decay),
   }
 
-  def pytorch_cosine_warmup(step_hint: int, hyperparameters, optimizer):
-    warmup_steps = int(hyperparameters.warmup_factor * step_hint)
-    warmup = LinearLR(
-        optimizer, start_factor=1e-10, end_factor=1., total_iters=warmup_steps)
-    cosine_steps = max(step_hint - warmup_steps, 1)
-    cosine_decay = CosineAnnealingLR(optimizer, T_max=cosine_steps)
-    return SequentialLR(
-        optimizer, schedulers=[warmup, cosine_decay], milestones=[warmup_steps])
+  optimizer_state['scheduler'] = WarmCosine(
+      optimizer_state['optimizer'], 
+      lr_min = 1e-10, 
+      lr_max = hyperparameters.learning_rate, 
+      warmup_steps = int(hyperparameters.warmup_factor * workload.step_hint), 
+      T = workload.step_hint)
 
-  optimizer_state['scheduler'] = pytorch_cosine_warmup(
-      workload.step_hint, hyperparameters, optimizer_state['optimizer'])
-
-  optimizer_state['input_queue_synced'] = False  # intentionally does not have state_dict()
+  optimizer_state['optimizer'].input_queue_synced = False # intentionally not saved in state_dict()
    
   return optimizer_state
 
@@ -367,16 +394,18 @@ def data_selection(workload: spec.Workload,
   Each element of the queue is a batch of training examples and labels.
   """
   del workload
-  del optimizer_state
   del current_param_container
   del model_state
   del hyperparameters
   del rng
   
-  if not optimizer_state['input_queue_synced']:
-    for _ in range(global_step):  # skip the first `global_step` batches
+  if not optimizer_state['optimizer'].input_queue_synced:
+    print(f"Skipping the first {global_step} batches to sync input queue.")
+    for _ in range(global_step):
       next(input_queue)
-    optimizer_state['input_queue_synced'] = True
-    
+    optimizer_state['optimizer'].input_queue_synced = True
+  
   batch = next(input_queue)
+  # if RANK==0:
+  #   print(f"global_step: {global_step}, batch: {batch['inputs']}")
   return batch

@@ -85,7 +85,10 @@ def maybe_restore_checkpoint(framework: str,
                              'checkpoint_' + str(latest_ckpt['global_step']))
   else:
     latest_ckpt = checkpoint_state
-    save_path = latest_checkpoint(checkpoint_dir)
+    if os.path.isfile(checkpoint_dir) and 'checkpoint_' in os.path.basename(checkpoint_dir):
+      save_path = checkpoint_dir
+    else:  # original code
+      save_path = latest_checkpoint(checkpoint_dir)
     if save_path is not None:
       latest_ckpt = torch.load(save_path, map_location=DEVICE)
 
