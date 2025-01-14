@@ -13,7 +13,7 @@ export TMPDIR=/fast/najroldi/tmp
 # Job specific vars
 workload_or_id=fastmri
 framework=pytorch
-submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget_sync_input_queue.py
+submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget_sync_input_queue_sidetrip.py
 search_space=script/debug/debug.json
 # name=test_01
 study=1
@@ -62,8 +62,8 @@ dataset=${workload_to_dataset[$workload]}
 
 # Experiment name
 # experiment_name="${name}_${workload}_${framework}"
-experiment_name=test_51
-resume_experiment_name="test_50/${workload}_pytorch/trial_1/checkpoint_9"
+experiment_name=test_62
+resume_experiment_name="test_60/${workload}_pytorch/trial_1/checkpoint_2"
 resume_last_run=True
 
 # Librispeech tokenizer path
@@ -119,9 +119,9 @@ torchrun \
   --halve_CUDA_mem=$halve_cuda_mem_flag \
   --pytorch_eval_num_workers=$eval_num_workers \
   --use_wandb \
-  --deterministic=True \
   --eval_every_n_steps=1
 
+  # --deterministic=True \
 
   # --trial_index=2 \
   # --fixed_space \

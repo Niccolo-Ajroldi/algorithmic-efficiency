@@ -7,9 +7,6 @@ from absl import logging
 import torch
 from torch import Tensor
 import torch.distributed.nn as dist_nn
-from torch.optim.lr_scheduler import CosineAnnealingLR
-from torch.optim.lr_scheduler import LinearLR
-from torch.optim.lr_scheduler import SequentialLR
 
 from algorithmic_efficiency import spec
 from algorithmic_efficiency.pytorch_utils import pytorch_setup
@@ -197,6 +194,8 @@ class WarmCosineWithCooldowns(object):  # WCWC
     self.warmup_steps = warmup_steps
     self.T = T
     self.t = 0
+    for group in self.optimizer.param_groups:
+      group["lr"] = lr_min
     
     # cooldown params
     self.cool_mode = cool_mode
@@ -210,13 +209,17 @@ class WarmCosineWithCooldowns(object):  # WCWC
     return self.lr_min
 
   def cooldwon_schedule(self, t):
-    return self.lr_cool_start - (self.lr_cool_start - self.lr_min) / self.cool_steps * (t - self.t_cool_start)
-
-  def schedule(self):
-    if not self.cool_steps:
-      return self.wc_schedule(self.t)
+    if t <= self.t_cool_start + self.cool_steps:
+      return self.lr_cool_start - (self.lr_cool_start - self.lr_min) / self.cool_steps * (t - self.t_cool_start)
     else:
-      return self.cooldwon_schedule(self.t)
+      print("=== REACHED COOLDOWN COMPLETION ===")
+      raise spec.TrainingCompleteError()
+
+  def schedule(self, t):
+    if not self.cool_mode:
+      return self.wc_schedule(t)
+    else:
+      return self.cooldwon_schedule(t)
   
   def step(self):
     self.t += 1
@@ -228,7 +231,6 @@ class WarmCosineWithCooldowns(object):  # WCWC
     return {key: value for key, value in self.__dict__.items() if key != "optimizer"}
 
   def load_state_dict(self, state_dict):
-    self.optimizer = state_dict["optimizer"]
     self.lr_min = state_dict["lr_min"]
     self.lr_max = state_dict["lr_max"]
     self.warmup_steps = state_dict["warmup_steps"]
@@ -236,9 +238,15 @@ class WarmCosineWithCooldowns(object):  # WCWC
     self.T = state_dict["T"]
     
     # intentionally not loading `cool_mode` and `cool_steps`
+    # can also resume without cooling down
     if self.cool_mode:
-      self.t_cool_start = self.t  # should be equal to global_step - 1 when resuming!
+      self.t_cool_start = self.t
       self.lr_cool_start = self.wc_schedule(self.t_cool_start)
+      print(
+        f"Resumed, t_cool_start = {self.t_cool_start} "
+        f", lr_cool_start = {self.lr_cool_start} "
+        f", cool_steps = {self.cool_steps}."
+      )
 
 
 def init_optimizer_state(workload: spec.Workload,
@@ -270,9 +278,9 @@ def init_optimizer_state(workload: spec.Workload,
       cool_mode = hyperparameters.cool_mode,
       cool_steps = hyperparameters.cool_steps,
   )
-  
-  optimizer_state['input_queue_synced'] = False  # intentionally does not have state_dict()
-   
+
+  optimizer_state['optimizer'].input_queue_synced = False # intentionally not saved in state_dict()
+
   return optimizer_state
 
 
@@ -292,10 +300,8 @@ def update_params(
   """Return (updated_optimizer_state, updated_params, updated_model_state)."""
   del current_params_types
   del loss_type
-  del train_state
   del eval_results
-  
-  ## TODO: send triaining_complete when cooldown finishes
+  del global_step
 
   current_model = current_param_container
   current_model.train()
@@ -337,23 +343,6 @@ def update_params(
         current_model.parameters(), max_norm=grad_clip)
   optimizer_state['optimizer'].step()
   optimizer_state['scheduler'].step()
-
-  # # Log training metrics - loss, grad_norm, batch_size.
-  # if global_step <= 100 or global_step % 500 == 0:
-  #   with torch.no_grad():
-  #     parameters = [p for p in current_model.parameters() if p.grad is not None]
-  #     grad_norm = torch.norm(
-  #         torch.stack([torch.norm(p.grad.detach(), 2) for p in parameters]), 2)
-  #   if workload.metrics_logger is not None:
-  #     workload.metrics_logger.append_scalar_metrics(
-  #         {
-  #             'loss': loss.item(),
-  #             'grad_norm': grad_norm.item(),
-  #         }, global_step)
-  #   logging.info('%d) loss = %0.3f, grad_norm = %0.3f',
-  #                global_step,
-  #                loss.item(),
-  #                grad_norm.item())
 
   return (optimizer_state, current_param_container, new_model_state)
 
@@ -419,16 +408,16 @@ def data_selection(workload: spec.Workload,
   Each element of the queue is a batch of training examples and labels.
   """
   del workload
-  del optimizer_state
   del current_param_container
   del model_state
   del hyperparameters
   del rng
-  
-  if not optimizer_state['input_queue_synced']:
-    for _ in range(global_step):  # skip the first `global_step` batches
+
+  if not optimizer_state['optimizer'].input_queue_synced:
+    print(f"Skipping the first {global_step} batches to sync input queue.")
+    for _ in range(global_step):
       next(input_queue)
-    optimizer_state['input_queue_synced'] = True
-    
+    optimizer_state['optimizer'].input_queue_synced = True
+
   batch = next(input_queue)
   return batch

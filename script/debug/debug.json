@@ -9,7 +9,9 @@
         "warmup_factor": 0.1,
         "lawa_burnin_pct": 0.0,
         "lawa_every_pct": 0.002,
-        "lawa_beta": 0.33
+        "lawa_beta": 0.33,
+        "cool_mode": true,
+        "cool_steps": 4
     }
 ]
 

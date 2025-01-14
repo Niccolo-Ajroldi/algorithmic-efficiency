@@ -219,6 +219,10 @@ flags.DEFINE_boolean(
     'deterministic',
     False,
     'Deterministic mode for PyTorch.')  # (nico)
+flags.DEFINE_boolean(
+    'log_lr',
+    False,
+    'Log Learning Rate to wandb.')  # (nico)
 FLAGS = flags.FLAGS
 USE_PYTORCH_DDP, RANK, DEVICE, N_GPUS = pytorch_setup()
 
@@ -417,6 +421,13 @@ def train_once(
     data_select_rng, update_rng, prep_eval_rng, eval_rng = \
       prng.split(step_rng, 4)
 
+    # (nico): log learning rate, NOTE: it accumulates to submission_time
+    if FLAGS.log_lr and RANK==0 and wandb is not None and FLAGS.use_wandb:
+      wandb.log({
+        "global_step": global_step,
+        "lr": optimizer_state['optimizer'].param_groups[0].get("lr", float("NaN"))
+      })
+
     with profiler.profile('Data selection'):
       batch = data_selection(workload,
                              input_queue,
@@ -503,12 +514,6 @@ def train_once(
       train_state['is_time_remaining'] = (
           train_state['accumulated_submission_time'] < max_allowed_runtime_sec)
 
-      if RANK==0 and wandb is not None and FLAGS.use_wandb:
-        wandb.log({
-          "global_step": global_step,
-          "lr": optimizer_state['optimizer'].param_groups[0].get("lr", float("NaN"))
-        })
-      
       # Eval if time is remaining (untimed).
       if train_state['is_time_remaining']:
 
