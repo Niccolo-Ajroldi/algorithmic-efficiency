@@ -206,7 +206,9 @@ class WarmCosine(object):
     self.warmup_steps = warmup_steps
     self.T = T
     self.t = 0
-
+    for group in self.optimizer.param_groups:
+      group["lr"] = lr_min
+    
   def schedule(self, t):
     if t <= self.warmup_steps:
       return self.lr_min + (self.lr_max-self.lr_min)/self.warmup_steps * t
