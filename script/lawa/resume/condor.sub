@@ -6,12 +6,12 @@ workload=ogbg
 framework=pytorch
 
 ## NadamW
-submission=submissions/nadamw_mod/nadamw_mod.py
-search_space=script/lawa/resume/nadamw_mod/trial_5.json
+submission=submissions/lawa_queue/lawa_queue.py
+search_space=script/lawa/resume/lawa/trial_5_04.json
 num_tuning_trials=1
 study=1
 
-name=nadamw_save_ckpt_01
+name=lawa_comp_04
 resume_experiment_name=nadamw_save_ckpt_01/$(workload)_pytorch/trial_1/checkpoint_2
 resume_last_run=False
 eval_every_n_steps=200
