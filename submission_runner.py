@@ -25,6 +25,7 @@ import struct
 import time
 from types import MappingProxyType
 from typing import Any, Dict, Optional, Tuple
+import wandb
 
 from absl import app
 from absl import flags
@@ -556,6 +557,10 @@ def train_once(
                   preemption_count=preemption_count,
                   is_eval=True,
               )
+              if wandb is not None and FLAGS.use_wandb:
+                wandb.log({
+                  "lr": optimizer_state['optimizer'].param_groups[0].get("lr", float("NaN"))
+                })
               if save_checkpoints:
                 checkpoint_utils.save_checkpoint(
                     framework=FLAGS.framework,
