@@ -557,7 +557,7 @@ def train_once(
                   preemption_count=preemption_count,
                   is_eval=True,
               )
-              if RANK==0 and wandb is not None and FLAGS.use_wandb:
+              if wandb is not None and FLAGS.use_wandb:
                 wandb.log({
                   "lr": optimizer_state['optimizer'].param_groups[0].get("lr", float("NaN"))
                 })
