@@ -1,0 +1,61 @@
+# Define variables
+LOGS_DIR=/fast/najroldi/logs/algoperf
+EXE=/home/najroldi/algorithmic-efficiency/script/lawa/resume/run.sh
+
+workload=ogbg
+framework=pytorch
+
+## NadamW
+submission=submissions/nadamw_mod/nadamw_mod.py
+search_space=script/lawa/resume/nadamw_mod/trial_5.json
+num_tuning_trials=1
+study=1
+
+name=nadamw_save_ckpt_01
+resume_experiment_name=nadamw_save_ckpt_01/$(workload)_pytorch/trial_1/checkpoint_2
+resume_last_run=False
+eval_every_n_steps=200
+save_checkpoints=True
+save_intermediate_checkpoints=True
+
+rng_seed=$(study)
+allow_tf_32=1
+run_until_the_end=1
+num_jobs=$(num_tuning_trials)
+
+# Args
+executable = $(EXE)
+arguments = \
+  $(workload) \
+  $(framework) \
+  $(submission) \
+  $(search_space) \
+  $(num_tuning_trials) \
+  $(study) \
+  $(name) \
+  $(resume_experiment_name) \
+  $(resume_last_run) \
+  $(eval_every_n_steps) \
+  $(save_checkpoints) \
+  $(save_intermediate_checkpoints) \
+  $(rng_seed) \
+  $(allow_tf_32) \
+  $(run_until_the_end) \
+  $(Cluster) \
+  $(Process)
+
+# Logs
+error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
+output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
+log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
+
+# Specs
+request_memory = 500000
+request_cpus = 36
+request_gpus = 4
+requirements = (TARGET.CUDACapability >= 8.0) && (TARGET.Machine != "g100.internal.cluster.is.localnet") && (TARGET.Machine != "g143.internal.cluster.is.localnet")
+# requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-40GB")
+# requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB")
+# requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB") && (TARGET.Machine != "g102.internal.cluster.is.localnet")
+
+queue $(num_jobs)
