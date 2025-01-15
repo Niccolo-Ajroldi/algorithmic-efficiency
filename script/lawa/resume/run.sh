@@ -83,25 +83,31 @@ fi
 
 # allow_tf_32
 allow_tf_32_flag=False
-if [ "$allow_tf_32" == "1" ]; then
+if [ "$allow_tf_32" == "True" ]; then
   allow_tf_32_flag=True
 fi
 
 # run_until_the_end
 run_until_the_end_flag=False
-if [ "$run_until_the_end" == "1" ]; then
+if [ "$run_until_the_end" == "True" ]; then
   run_until_the_end_flag=True
 fi
 
-# run_until_the_end
+# resume_last_run
+resume_last_run_flag=False
+if [ "$resume_last_run" == "True" ]; then
+  resume_last_run_flag=True
+fi
+
+# save_checkpoints
 save_checkpoints_flag=False
-if [ "$save_checkpoints" == "1" ]; then
+if [ "$save_checkpoints" == "True" ]; then
   save_checkpoints_flag=True
 fi
 
-# run_until_the_end
+# save_intermediate_checkpoints
 save_intermediate_checkpoints_flag=False
-if [ "$save_intermediate_checkpoints" == "1" ]; then
+if [ "$save_intermediate_checkpoints" == "True" ]; then
   save_intermediate_checkpoints_flag=True
 fi
 
@@ -126,7 +132,7 @@ OMP_NUM_THREADS=1 torchrun \
   --experiment_dir=$EXP_DIR  \
   --experiment_name=$experiment_name \
   --resume_experiment_name=$resume_experiment_name \
-  --resume_last_run=$resume_last_run \
+  --resume_last_run=$resume_last_run_flag \
   --eval_every_n_steps=$eval_every_n_steps \
   --save_checkpoints=$save_checkpoints_flag \
   --save_intermediate_checkpoints=$save_intermediate_checkpoints_flag \

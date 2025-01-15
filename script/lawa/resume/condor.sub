@@ -2,25 +2,34 @@
 LOGS_DIR=/fast/najroldi/logs/algoperf
 EXE=/home/najroldi/algorithmic-efficiency/script/lawa/resume/run.sh
 
-workload=ogbg
+workload=criteo1tb
 framework=pytorch
 
-## NadamW
+# ## NadamW
+# submission=submissions/nadamw_mod/nadamw_mod.py
+# search_space=script/lawa/resume/nadamw_mod/trial_5.json
+
+## LAWA
 submission=submissions/lawa_queue/lawa_queue.py
-search_space=script/lawa/resume/lawa/trial_5_04.json
+search_space=script/lawa/resume/lawa/trial_5_h100_01.json
+
 num_tuning_trials=1
 study=1
 
-name=lawa_comp_04
-resume_experiment_name=nadamw_save_ckpt_01/$(workload)_pytorch/trial_1/checkpoint_2
+# checkpoint=63600
+# name=nadamw_resume_$(checkpoint)
+name=lawa_h100_01
+# name=nadamw_save_ckpt_01_study_1
+
+resume_experiment_name=nadamw_save_ckpt_01_study_1/$(workload)_pytorch/trial_1/checkpoint_$(checkpoint)
 resume_last_run=False
-eval_every_n_steps=200
-save_checkpoints=True
-save_intermediate_checkpoints=True
+eval_every_n_steps=20
+save_checkpoints=False
+save_intermediate_checkpoints=False
 
 rng_seed=$(study)
-allow_tf_32=1
-run_until_the_end=1
+allow_tf_32=True
+run_until_the_end=True
 num_jobs=$(num_tuning_trials)
 
 # Args
