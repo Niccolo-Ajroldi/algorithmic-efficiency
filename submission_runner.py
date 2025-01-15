@@ -223,6 +223,10 @@ flags.DEFINE_boolean(
     'log_lr',
     False,
     'Log Learning Rate to wandb.')  # (nico)
+flags.DEFINE_integer(
+    'save_ckpt_freq',
+    None,
+    'Save checkpoint every n steps.')  # (nico)
 FLAGS = flags.FLAGS
 USE_PYTORCH_DDP, RANK, DEVICE, N_GPUS = pytorch_setup()
 
@@ -580,7 +584,7 @@ def train_once(
                   preemption_count=preemption_count,
                   is_eval=True,
               )
-              if save_checkpoints:
+              if save_checkpoints and FLAGS.save_ckpt_freq is None:  # (nico): save ckpt when eval'ing
                 checkpoint_utils.save_checkpoint(
                     framework=FLAGS.framework,
                     optimizer_state=optimizer_state,
@@ -607,6 +611,22 @@ def train_once(
                   'Error: GPU out of memory during eval during step '
                   f'{global_step}, error : {str(e)}.')
               _reset_cuda_mem()
+
+    # (nico): save ckpt decoupled from eval
+    if FLAGS.save_ckpt_freq is not None and global_step % FLAGS.save_ckpt_freq == 0:
+      checkpoint_utils.save_checkpoint(
+          framework=FLAGS.framework,
+          optimizer_state=optimizer_state,
+          model_params=model_params,
+          model_state=model_state,
+          train_state=train_state,
+          eval_results=eval_results,
+          global_step=global_step,
+          preemption_count=preemption_count,
+          checkpoint_dir=log_dir,
+          save_intermediate_checkpoints=FLAGS
+          .save_intermediate_checkpoints)
+          
 
     train_state['last_step_end_time'] = get_time()
 

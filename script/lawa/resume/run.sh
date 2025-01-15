@@ -28,13 +28,14 @@ resume_last_run=${9}
 eval_every_n_steps=${10}
 save_checkpoints=${11}
 save_intermediate_checkpoints=${12}
+save_ckpt_freq=${13}
 
-rng_seed=${13}
-allow_tf_32=${14}
-run_until_the_end=${15}
+rng_seed=${14}
+allow_tf_32=${15}
+run_until_the_end=${16}
 
-cluster_id=${16}
-process_id=${17}
+cluster_id=${17}
+process_id=${18}
 
 # CONDOR job arrays range from 0 to n-1, so we add +1 here
 # $((...)) is for arithmetic substitution in .sh
@@ -136,6 +137,7 @@ OMP_NUM_THREADS=1 torchrun \
   --eval_every_n_steps=$eval_every_n_steps \
   --save_checkpoints=$save_checkpoints_flag \
   --save_intermediate_checkpoints=$save_intermediate_checkpoints_flag \
+  --save_ckpt_freq=$save_ckpt_freq \
   --overwrite \
   --use_wandb \
   --rng_seed=$rng_seed \

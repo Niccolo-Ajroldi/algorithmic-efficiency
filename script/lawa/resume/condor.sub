@@ -2,7 +2,7 @@
 LOGS_DIR=/fast/najroldi/logs/algoperf
 EXE=/home/najroldi/algorithmic-efficiency/script/lawa/resume/run.sh
 
-workload=criteo1tb
+workload=wmt
 framework=pytorch
 
 # ## NadamW
@@ -18,7 +18,7 @@ study=1
 
 # checkpoint=63600
 # name=nadamw_resume_$(checkpoint)
-name=lawa_h100_01
+# name=lawa_h100_01
 # name=nadamw_save_ckpt_01_study_1
 
 resume_experiment_name=nadamw_save_ckpt_01_study_1/$(workload)_pytorch/trial_1/checkpoint_$(checkpoint)
@@ -26,6 +26,7 @@ resume_last_run=False
 eval_every_n_steps=20
 save_checkpoints=False
 save_intermediate_checkpoints=False
+save_ckpt_freq=20
 
 rng_seed=$(study)
 allow_tf_32=True
@@ -47,6 +48,7 @@ arguments = \
   $(eval_every_n_steps) \
   $(save_checkpoints) \
   $(save_intermediate_checkpoints) \
+  $(save_ckpt_freq) \
   $(rng_seed) \
   $(allow_tf_32) \
   $(run_until_the_end) \
