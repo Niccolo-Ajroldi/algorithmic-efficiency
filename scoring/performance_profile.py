@@ -48,8 +48,9 @@ WORKLOAD_NAME_PATTERN = '(.*)(_jax|_pytorch)'
 BASE_WORKLOADS_DIR = 'algorithmic_efficiency/workloads/'
 # Open json file to read heldout workloads
 # TODO: This probably shouldn't be hardcoded but passed as an argument.
-with open("held_out_workloads_algoperf_v05.json", "r") as f:
-  HELDOUT_WORKLOADS = json.load(f)
+# with open("held_out_workloads_algoperf_v05.json", "r") as f:
+#   HELDOUT_WORKLOADS = json.load(f)
+HELDOUT_WORKLOADS=[]
 # These global variables have to be set according to the current set of
 # workloads and rules for the scoring to be correct.
 # We do not use the workload registry since it contains test and development
