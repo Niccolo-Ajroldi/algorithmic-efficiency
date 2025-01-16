@@ -18,8 +18,8 @@ from torch.optim.lr_scheduler import SequentialLR
 
 from algorithmic_efficiency import spec
 from algorithmic_efficiency.pytorch_utils import pytorch_setup
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.distributed_shampoo import DistributedShampoo
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.shampoo_types import (
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.distributed_shampoo import DistributedShampoo
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.shampoo_types import (
     AdamGraftingConfig,
     AdaGradGraftingConfig,
     CommunicationDType,
