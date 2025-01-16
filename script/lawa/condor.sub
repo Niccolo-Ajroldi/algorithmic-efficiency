@@ -18,8 +18,8 @@ framework=pytorch
 
 ## LAWA
 submission=submissions/lawa_ema/lawa_ema_no_decay.py
-search_space=script/lawa/queue/lawa_trial_5_tune_9.json
-num_tuning_trials=12
+search_space=script/lawa/ema/lawa_trial_5_tune_07.json
+num_tuning_trials=25
 study=1
 name=lawa_ema_no_decay_01
 rng_seed=$(study)
@@ -52,7 +52,8 @@ log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 request_memory = 500000
 request_cpus = 36
 request_gpus = 4
-requirements = (TARGET.CUDACapability >= 8.0) && (TARGET.Machine != "g100.internal.cluster.is.localnet") && (TARGET.Machine != "g143.internal.cluster.is.localnet")
+requirements = TARGET.CUDACapability >= 8.0
+# requirements = (TARGET.CUDACapability >= 8.0) && (TARGET.Machine != "g100.internal.cluster.is.localnet") && (TARGET.Machine != "g143.internal.cluster.is.localnet")
 # requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-40GB")
 # requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB")
 # requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB") && (TARGET.Machine != "g102.internal.cluster.is.localnet")
