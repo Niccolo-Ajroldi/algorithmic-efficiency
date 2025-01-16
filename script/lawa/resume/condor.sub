@@ -2,12 +2,12 @@
 LOGS_DIR=/fast/najroldi/logs/algoperf
 EXE=/home/najroldi/algorithmic-efficiency/script/lawa/resume/run.sh
 
-workload=wmt
+workload=imagenet_vit
 framework=pytorch
 
 ## NadamW
 submission=submissions/nadamw_mod/nadamw_mod.py
-search_space=script/lawa/resume/cool/trial_5_cool_150.json
+search_space=script/lawa/resume/nadamw_mod/trial_3.json
 
 # ## LAWA
 # submission=submissions/lawa_queue/lawa_queue.py
@@ -16,17 +16,18 @@ search_space=script/lawa/resume/cool/trial_5_cool_150.json
 num_tuning_trials=1
 study=1
 
-checkpoint=12800
-name=nadamw_resume_$(checkpoint)
+# checkpoint=112800
+# name=nadamw_resume_$(checkpoint)
 # name=lawa_h7200_01
-# name=nadamw_save_ckpt_01
+name=nadamw_save_ckpt_01
 
-resume_experiment_name=nadamw_save_ckpt_01_study_1/$(workload)_pytorch/trial_1/checkpoint_$(checkpoint)
-resume_last_run=True
-eval_every_n_steps=1500
-save_checkpoints=False
-save_intermediate_checkpoints=False
-save_ckpt_freq=150
+resume_experiment_name=None
+# resume_experiment_name=nadamw_save_ckpt_01_study_1/$(workload)_pytorch/trial_1/checkpoint_$(checkpoint)
+resume_last_run=False
+eval_every_n_steps=1000
+save_checkpoints=True
+save_intermediate_checkpoints=True
+save_ckpt_freq=1000
 
 rng_seed=$(study)
 allow_tf_32=True

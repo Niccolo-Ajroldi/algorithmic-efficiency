@@ -615,8 +615,8 @@ def train_once(
 
     # (nico): save ckpt decoupled from eval  
     if log_dir is not None and RANK == 0 and \
-        save_checkpoints and FLAGS.save_ckpt_freq is not None \
-        and global_step % FLAGS.save_ckpt_freq == 0:
+        save_checkpoints and FLAGS.save_ckpt_freq is not None and \
+        global_step % FLAGS.save_ckpt_freq == 0:
       checkpoint_utils.save_checkpoint(
           framework=FLAGS.framework,
           optimizer_state=optimizer_state,
