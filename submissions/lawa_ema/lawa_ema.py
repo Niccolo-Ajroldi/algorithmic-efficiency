@@ -237,8 +237,21 @@ class LAWA():
     self.beta = hyperparameters.lawa_beta
     assert self.beta >= 0 and self.beta <= 1, f"invalud value of lawa_beta: {self.beta}"
     self.ema = None
+    
     self.start_step = math.ceil(workload.step_hint * hyperparameters.lawa_burnin_pct)
-    self.every_step = math.ceil(workload.step_hint * hyperparameters.lawa_every_pct)
+    
+    has_pct = getattr(hyperparameters, "lawa_every_pct", None) is not None
+    has_step = getattr(hyperparameters, "lawa_every_steps", None) is not None
+    if not has_pct and not has_step:
+      raise ValueError("Missing hyperparameter: lawa_every_steps or lawa_every_pct")
+    if has_step and has_pct:
+      raise ValueError("Both lawa_every_steps and lawa_every_pct are defined")
+
+    if has_step:
+      self.every_step = int(hyperparameters.lawa_every_steps)
+    else:
+      self.every_step = math.ceil(workload.step_hint * hyperparameters.lawa_every_pct)
+    logging.info('=== Running LAWA with self.every_step = %d ===', self.every_step)
 
   def store_tmp_params(self, params):
     self.tmp_params = [p.detach().cpu() for p in params]

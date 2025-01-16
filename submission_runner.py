@@ -221,7 +221,7 @@ flags.DEFINE_boolean(
     'Deterministic mode for PyTorch.')  # (nico)
 flags.DEFINE_boolean(
     'log_lr',
-    False,
+    True,
     'Log Learning Rate to wandb.')  # (nico)
 flags.DEFINE_integer(
     'save_ckpt_freq',
@@ -427,7 +427,9 @@ def train_once(
 
     # (nico): log learning rate, NOTE: it accumulates to submission_time
     if FLAGS.log_lr and RANK==0 and wandb is not None and FLAGS.use_wandb:
-      if FLAGS.save_ckpt_freq is None or global_step % FLAGS.save_ckpt_freq == 0:
+      # log every 200 steps or every save_ckpt_freq
+      if (FLAGS.save_ckpt_freq is None and global_step % 200) or \
+          (FLAGS.save_ckpt_freq is None or global_step % FLAGS.save_ckpt_freq == 0):
         wandb.log({
           "global_step": global_step,
           "lr": optimizer_state['optimizer'].param_groups[0].get("lr", float("NaN"))

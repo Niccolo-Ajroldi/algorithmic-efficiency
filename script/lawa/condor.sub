@@ -5,27 +5,27 @@ EXE=/home/najroldi/algorithmic-efficiency/script/lawa/auto_run.sh
 workload=ogbg
 framework=pytorch
 
-## NadamW
-submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
-search_space=script/lawa/nadam/nadamw_trial_5.json
-num_tuning_trials=1
-study=3
-name=nadamw_short_sched_01
-rng_seed=$(study)
-allow_tf_32=1
-run_until_the_end=0
-num_jobs=$(num_tuning_trials)
-
-# ## LAWA
-# submission=submissions/lawa_queue/lawa_queue_no_decay.py
-# search_space=script/lawa/queue/lawa_trial_5_tune_9.json
-# num_tuning_trials=12
-# study=1
-# name=lawa_queue_no_decay_02
+# ## NadamW
+# submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
+# search_space=script/lawa/nadam/nadamw_trial_5.json
+# num_tuning_trials=1
+# study=3
+# name=nadamw_short_sched_01
 # rng_seed=$(study)
 # allow_tf_32=1
-# run_until_the_end=1
+# run_until_the_end=0
 # num_jobs=$(num_tuning_trials)
+
+## LAWA
+submission=submissions/lawa_ema/lawa_ema_no_decay.py
+search_space=script/lawa/queue/lawa_trial_5_tune_9.json
+num_tuning_trials=12
+study=1
+name=lawa_ema_no_decay_01
+rng_seed=$(study)
+allow_tf_32=1
+run_until_the_end=1
+num_jobs=$(num_tuning_trials)
 
 # Args
 executable = $(EXE)

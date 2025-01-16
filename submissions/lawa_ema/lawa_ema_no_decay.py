@@ -1,11 +1,11 @@
 """
-LAWA queue on NAdamW optimizer with warmup+cosine LR in PyTorch.
-LAWA queue offloaded to cpu.
+LAWA ema on NAdamW optimizer with warmup+cosine LR in PyTorch.
+LAWA ema offloaded to cpu.
 
 Hyperparameters:
   - lawa_burnin_pct
   - lawa_every_pct
-  - lawa_queue_len
+  - lawa_beta
 
 TODO: explore Tensor.copy_(orig, non_blocking=True)
 """
@@ -13,13 +13,15 @@ TODO: explore Tensor.copy_(orig, non_blocking=True)
 import math
 from typing import Dict, Iterator, List, Tuple
 
-from collections import deque
 from itertools import islice
 
 from absl import logging
 import torch
 from torch import Tensor
 import torch.distributed.nn as dist_nn
+from torch.optim.lr_scheduler import LinearLR
+from torch.optim.lr_scheduler import SequentialLR
+from torch.optim.lr_scheduler import ConstantLR
 
 from algorithmic_efficiency import spec
 from algorithmic_efficiency.pytorch_utils import pytorch_setup
@@ -199,45 +201,12 @@ def nadamw(params: List[Tensor],
     exp_avg.sub_(grad, alpha=1 - beta1).div_(beta1)
 
 
-class WarmCosine(object):
-  def __init__(self, optimizer, lr_min, lr_max, warmup_steps, T):
-    self.optimizer = optimizer
-    self.lr_min = lr_min
-    self.lr_max = lr_max
-    self.warmup_steps = warmup_steps
-    self.T = T
-    self.t = 0
-    for group in self.optimizer.param_groups:
-      group["lr"] = lr_min
-    
-  def schedule(self, t):
-    if t <= self.warmup_steps:
-      return self.lr_min + (self.lr_max-self.lr_min)/self.warmup_steps * t
-    elif t <= self.T:
-      return self.lr_min + 0.5 * (self.lr_max-self.lr_min) * (1 + math.cos((t-self.warmup_steps) * math.pi / (self.T-self.warmup_steps)))
-    return self.lr_min
-
-  def step(self):
-    self.t += 1
-    # get LR for this step
-    lr = self.schedule(self.t)
-    # set LR in optimizer
-    for group in self.optimizer.param_groups:
-      group["lr"] = lr
-
-  def state_dict(self):
-    return {key: value for key, value in self.__dict__.items() if key != "optimizer"}
-
-  def load_state_dict(self, state_dict):
-    self.__dict__.update(state_dict)
-
-
 class LAWA():
   def __init__(self, hyperparameters, workload) -> None:
     self.tmp_params = None
-    self.maxlen = int(hyperparameters.lawa_queue_len)
-    self.queue = deque(maxlen=self.maxlen)
-
+    self.beta = hyperparameters.lawa_beta
+    assert self.beta >= 0 and self.beta <= 1, f"invalud value of lawa_beta: {self.beta}"
+    self.ema = None
     self.start_step = math.ceil(workload.step_hint * hyperparameters.lawa_burnin_pct)
 
     has_pct = getattr(hyperparameters, "lawa_every_pct", None) is not None
@@ -253,29 +222,16 @@ class LAWA():
       self.every_step = math.ceil(workload.step_hint * hyperparameters.lawa_every_pct)
     logging.info('=== Running LAWA with self.every_step = %d ===', self.every_step)
 
-
   def store_tmp_params(self, params):
     self.tmp_params = [p.detach().cpu() for p in params]
 
-  def append(self, params):
-    self.queue.append([p.detach().cpu() for p in params])
-
-  def full(self):
-    return len(self.queue) == self.maxlen
-
-  def avg(self):
-    """Returns the average tensor, which lays on CPU."""
-    k = float(self.maxlen)
-
-    # Initialize avg with first element of the queue
-    q_avg = [p.clone().div_(k) for p in self.queue[0]] # self.queue[0] is already on cpu!
-
-    # Loop over queue and update avg
-    for chkpts in islice(self.queue, 1, None):
-      for p_avg,p in zip(q_avg, chkpts):
-        p_avg.add_(p/k)
-
-    return q_avg
+  def update_ema(self, params):
+    if self.ema is None:
+      self.ema = [p.detach().cpu() for p in params]
+    else:
+      beta = self.beta
+      for p_ema, p in zip(self.ema, params):
+        p_ema.mul_(beta).add_(p.detach().cpu(), alpha=1-beta)
   
   def state_dict(self):
     return {key: value for key, value in self.__dict__.items()}
@@ -304,13 +260,18 @@ def init_optimizer_state(workload: spec.Workload,
       weight_decay=hyperparameters.weight_decay)
   
   optimizer_state['lawa'] = LAWA(hyperparameters, workload)
-    
-  optimizer_state['scheduler'] = WarmCosine(
-      optimizer_state['optimizer'], 
-      lr_min = 1e-10, 
-      lr_max = hyperparameters.learning_rate, 
-      warmup_steps = int(hyperparameters.warmup_factor * workload.step_hint), 
-      T = workload.step_hint)
+
+  def pytorch_cosine_warmup(step_hint: int, hyperparameters, optimizer):
+      warmup_steps = int(hyperparameters.warmup_factor * step_hint)
+      warmup = LinearLR(
+          optimizer, start_factor=1e-10, end_factor=1., total_iters=warmup_steps)
+      constant_steps = max(step_hint - warmup_steps, 1)
+      constant_lr = ConstantLR(optimizer, factor=1., total_iters=constant_steps)
+      return SequentialLR(
+          optimizer, schedulers=[warmup, constant_lr], milestones=[warmup_steps])
+
+  optimizer_state['scheduler'] = pytorch_cosine_warmup(
+      workload.step_hint, hyperparameters, optimizer_state['optimizer'])
 
   return optimizer_state
 
@@ -382,7 +343,7 @@ def update_params(workload: spec.Workload,
 
   # Update LAWA
   if global_step >= lawa.start_step and global_step % lawa.every_step == 0:
-    lawa.append(current_model.parameters())
+    lawa.update_ema(current_model.parameters())
 
   return (optimizer_state, current_param_container, new_model_state)
 
@@ -401,17 +362,15 @@ def prepare_for_eval(workload: spec.Workload,
   lawa = optimizer_state['lawa']
   current_model = current_param_container
   
-  if global_step < lawa.start_step or not lawa.full():
+  if global_step < lawa.start_step:
     return (optimizer_state, current_model, model_state)
 
   # Save parameters for next step
   lawa.store_tmp_params(current_model.parameters())
 
-  # Load avg into model
-  if lawa.full():  # redundant
-    avg = lawa.avg()  # compute avg on CPU
-    for p, p_avg in zip(current_model.parameters(), avg):
-        p.data.copy_(p_avg.data)  # move avg to GPU
+  # Load ema into model
+  for p, p_avg in zip(current_model.parameters(), lawa.ema):
+      p.data.copy_(p_avg.data)  # move avg to GPU
 
   return (optimizer_state, current_model, model_state)
 
