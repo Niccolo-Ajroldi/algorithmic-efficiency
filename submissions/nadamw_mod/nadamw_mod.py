@@ -249,7 +249,7 @@ class WarmCosineWithCooldowns(object):  # WCWC
     if self.cool_mode:
       self.t_cool_start = self.t
       self.lr_cool_start = self.wc_schedule(self.t_cool_start)
-      print(
+      logging.info(
         f"Resumed, t_cool_start = {self.t_cool_start} "
         f", lr_cool_start = {self.lr_cool_start} "
         f", cool_steps = {self.cool_steps}."
@@ -421,7 +421,7 @@ def data_selection(workload: spec.Workload,
   del rng
 
   if not optimizer_state['optimizer'].input_queue_synced:
-    print(f"Skipping the first {global_step} batches to sync input queue.")
+    logging.info(f"Skipping the first {global_step} batches to sync input queue.")
     for _ in range(global_step):
       next(input_queue)
     optimizer_state['optimizer'].input_queue_synced = True

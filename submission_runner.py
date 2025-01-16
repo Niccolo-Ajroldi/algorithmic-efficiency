@@ -416,10 +416,10 @@ def train_once(
   #     not goals_reached and \
   #     not train_state['training_complete'] and \
   #     global_step <= workload.step_hint:  # (nico): running on faster Hardware, need this!
-  
+
   while global_step <= workload.step_hint and \
-      (FLAGS.run_until_the_end or \
-      (train_state['is_time_remaining'] and not goals_reached and not train_state['training_complete'])):
+      not train_state['training_complete'] and \
+      (FLAGS.run_until_the_end or (train_state['is_time_remaining'] and not goals_reached)):
 
     step_rng = prng.fold_in(rng, global_step)
     data_select_rng, update_rng, prep_eval_rng, eval_rng = \
