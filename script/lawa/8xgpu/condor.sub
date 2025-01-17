@@ -1,0 +1,72 @@
+# Define variables
+LOGS_DIR=/fast/najroldi/logs/algoperf
+EXE=/home/najroldi/algorithmic-efficiency/script/lawa/8xgpu/auto_run.sh
+
+workload=ogbg
+framework=pytorch
+
+# ## NadamW
+# submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
+# search_space=script/lawa/nadam/nadamw_trial_5.json
+# num_tuning_trials=1
+# study=3
+# name=nadamw_short_sched_01
+# rng_seed=$(study)
+# allow_tf_32=1
+# run_until_the_end=0
+# num_jobs=$(num_tuning_trials)
+
+# ## LAWA
+# submission=submissions/lawa_ema/lawa_ema_no_decay.py
+# search_space=script/lawa/ema/lawa_trial_5_tune_07.json
+# num_tuning_trials=25
+# study=1
+# name=lawa_ema_no_decay_01
+# rng_seed=$(study)
+# allow_tf_32=1
+# run_until_the_end=1
+# num_jobs=$(num_tuning_trials)
+
+## SHAMPOO
+submission=submissions/AlgoPerf_Team_21/external_tuning/shampoo_submission/submission.py
+search_space=script/lawa/shampoo/trial_4.json
+num_tuning_trials=1
+study=1
+name=shampoo_01
+rng_seed=$(study)
+allow_tf_32=1
+run_until_the_end=0
+num_jobs=$(num_tuning_trials)
+
+# Args
+executable = $(EXE)
+arguments = \
+  $(workload) \
+  $(framework) \
+  $(submission) \
+  $(search_space) \
+  $(num_tuning_trials) \
+  $(study) \
+  $(name) \
+  $(rng_seed) \
+  $(allow_tf_32) \
+  $(run_until_the_end) \
+  $(Cluster) \
+  $(Process)
+
+# Logs
+error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
+output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
+log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
+
+# Specs
+request_memory = 500000
+request_cpus = 36
+request_gpus = 8
+requirements = TARGET.CUDACapability >= 8.0
+# requirements = (TARGET.CUDACapability >= 8.0) && (TARGET.Machine != "g100.internal.cluster.is.localnet") && (TARGET.Machine != "g143.internal.cluster.is.localnet")
+# requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-40GB")
+# requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB")
+# requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB") && (TARGET.Machine != "g102.internal.cluster.is.localnet")
+
+queue $(num_jobs)
