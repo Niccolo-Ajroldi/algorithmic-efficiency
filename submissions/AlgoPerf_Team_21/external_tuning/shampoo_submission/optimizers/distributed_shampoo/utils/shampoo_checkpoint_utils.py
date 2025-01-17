@@ -15,7 +15,7 @@ from operator import or_
 from typing import Any, Dict, List, Union
 
 import torch
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.optimizer_modules import OptimizerModule
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.optimizer_modules import OptimizerModule
 
 
 logger: logging.Logger = logging.getLogger(__name__)

@@ -10,7 +10,7 @@ LICENSE file in the root directory of this source tree.
 from typing import Dict, Tuple
 
 import torch
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.shampoo_types import FSDPParameterMetadata
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.shampoo_types import FSDPParameterMetadata
 
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
 from torch.nn import Parameter

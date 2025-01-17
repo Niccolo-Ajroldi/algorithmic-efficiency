@@ -24,7 +24,7 @@ from typing import (
 
 import torch
 
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.shampoo_types import (
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.shampoo_types import (
     AdaGradGraftingConfig,
     AdamGraftingConfig,
     BETAS,
@@ -68,27 +68,27 @@ from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.sh
     WEIGHT_DECAY,
 )
 
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_checkpoint_utils import (
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_checkpoint_utils import (
     extract_state_dict_content,
     flatten,
     unflatten,
     update_param_state_dict_object,
 )
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_ddp_distributor import (
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_ddp_distributor import (
     DDPDistributor,
 )
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_distributor import Distributor
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_fsdp_distributor import (
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_distributor import Distributor
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_fsdp_distributor import (
     FSDPDistributor,
 )
 
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_preconditioner_list import (
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_preconditioner_list import (
     AdagradPreconditionerList,
     RWSAdagradPreconditionerList,
     SGDPreconditionerList,
     ShampooPreconditionerList,
 )
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_utils import compress_list
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_utils import compress_list
 
 logger: logging.Logger = logging.getLogger(__name__)
 

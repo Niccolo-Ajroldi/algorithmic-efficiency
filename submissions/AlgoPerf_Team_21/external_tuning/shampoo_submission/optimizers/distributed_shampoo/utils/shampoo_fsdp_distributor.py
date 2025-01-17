@@ -11,18 +11,18 @@ from math import prod
 from typing import Any, Dict, List, Tuple
 
 import torch
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.shampoo_types import (
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.shampoo_types import (
     FSDPParameterMetadata,
     FSDPShampooConfig,
     MAX_PRECONDITIONER_DIM,
     PARAMS,
     USE_MERGE_DIMS,
 )
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_block_info import BlockInfo
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_distributor import (
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_block_info import BlockInfo
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_distributor import (
     DistributorInterface,
 )
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_utils import (
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_utils import (
     compress_list,
     generate_pairwise_indices,
     merge_small_dims,

@@ -14,16 +14,16 @@ from typing import Any, Dict, Optional, Tuple
 
 import torch
 import torch.distributed as dist
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.shampoo_types import (
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.shampoo_types import (
     CommunicationDType,
     DDPShampooConfig,
     PARAMS,
 )
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_block_info import DDPBlockInfo
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_distributor import (
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_block_info import DDPBlockInfo
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_distributor import (
     DistributorInterface,
 )
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_utils import (
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_utils import (
     compress_list,
     generate_pairwise_indices,
     get_dtype_size,

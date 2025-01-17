@@ -16,18 +16,18 @@ from typing import Any, DefaultDict, Sequence, Tuple, Union
 
 import torch
 import torch.distributed as dist
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_block_info import BlockInfo
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_utils import (
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_block_info import BlockInfo
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.distributed_shampoo.utils.shampoo_utils import (
     compress_list,
     get_dtype_size,
 )
 
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.matrix_functions import (
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.matrix_functions import (
     check_diagonal,
     compute_matrix_root_inverse_residuals,
     matrix_inverse_root,
 )
-from submissions.submissions_algorithms_v0_5.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.optimizer_modules import OptimizerModule
+from submissions.AlgoPerf_Team_21.external_tuning.shampoo_submission.optimizers.optimizer_modules import OptimizerModule
 from torch import Tensor
 from torch.autograd import profiler
 
