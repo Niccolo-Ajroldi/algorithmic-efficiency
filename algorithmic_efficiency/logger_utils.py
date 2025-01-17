@@ -302,6 +302,8 @@ class MetricLogger(object):
     if events_dir:
       self._tb_metric_writer = metric_writers.create_default_writer(events_dir)
       if wandb is not None and self.use_wandb:
+        os.environ["WANDB__SERVICE_WAIT"] = "600"  # (nico)
+        # os.environ["WANDB_SILENT"] = "true"  # (nico)
         wandb.init(
             project='algoperf_lawa',  # (nico)
             name=configs.experiment_name,  # (nico)
