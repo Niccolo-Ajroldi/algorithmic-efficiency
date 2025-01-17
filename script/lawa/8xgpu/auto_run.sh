@@ -102,8 +102,6 @@ torchrun \
   --submission_path=$submission \
   --tuning_search_space=$search_space \
   --num_tuning_trials=$num_tuning_trials \
-  --fixed_space \
-  --trial_index=$trial_index \
   --experiment_dir=$EXP_DIR  \
   --experiment_name=$experiment_name \
   --save_intermediate_checkpoints=False \
@@ -115,9 +113,12 @@ torchrun \
   --run_until_the_end=$run_until_the_end_flag \
   --halve_CUDA_mem=False \
   --pytorch_eval_num_workers=$pytorch_eval_num_workers \
-  --resume_last_run \
   --cluster_id $cluster_id \
   --process_id $process_id
+
+# --fixed_space \
+# --trial_index=$trial_index \
+# --resume_last_run \
 
 # --max_pct_of_global_steps=0.1
 # resuming is needed with multiple paralell processes accessing the same dir

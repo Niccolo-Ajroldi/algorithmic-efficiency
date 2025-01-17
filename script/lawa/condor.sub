@@ -16,27 +16,27 @@ framework=pytorch
 # run_until_the_end=0
 # num_jobs=$(num_tuning_trials)
 
-# ## LAWA
-# submission=submissions/lawa_ema/lawa_ema_no_decay.py
-# search_space=script/lawa/ema/lawa_trial_5_tune_07.json
-# num_tuning_trials=25
-# study=1
-# name=lawa_ema_no_decay_01
-# rng_seed=$(study)
-# allow_tf_32=1
-# run_until_the_end=1
-# num_jobs=$(num_tuning_trials)
-
-## SHAMPOO
-submission=submissions/AlgoPerf_Team_21/external_tuning/shampoo_submission/submission.py
-search_space=script/lawa/shampoo/trial_4.json
-num_tuning_trials=1
+## LAWA
+submission=submissions/lawa_ema/lawa_ema_no_decay.py
+search_space=script/lawa/ema/lawa_trial_5_tune_07.json
+num_tuning_trials=25
 study=1
-name=shampoo_01
+name=lawa_ema_no_decay_01
 rng_seed=$(study)
 allow_tf_32=1
 run_until_the_end=0
 num_jobs=$(num_tuning_trials)
+
+# ## SHAMPOO
+# submission=submissions/AlgoPerf_Team_21/external_tuning/shampoo_submission/submission.py
+# search_space=script/lawa/shampoo/trial_4.json
+# num_tuning_trials=1
+# study=1
+# name=shampoo_01
+# rng_seed=$(study)
+# allow_tf_32=1
+# run_until_the_end=0
+# num_jobs=$(num_tuning_trials)
 
 # Args
 executable = $(EXE)
