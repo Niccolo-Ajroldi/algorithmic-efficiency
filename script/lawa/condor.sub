@@ -2,7 +2,7 @@
 LOGS_DIR=/fast/najroldi/logs/algoperf
 EXE=/home/najroldi/algorithmic-efficiency/script/lawa/auto_run.sh
 
-workload=ogbg
+workload=criteo1tb
 framework=pytorch
 
 # ## NadamW
@@ -18,8 +18,8 @@ framework=pytorch
 
 ## LAWA
 submission=submissions/lawa_ema/lawa_ema_no_decay.py
-search_space=script/lawa/ema/lawa_trial_5_tune_07.json
-num_tuning_trials=25
+search_space=script/lawa/ema/lawa_trial_5_tune_08.json
+num_tuning_trials=20
 study=1
 name=lawa_ema_no_decay_01
 rng_seed=$(study)
