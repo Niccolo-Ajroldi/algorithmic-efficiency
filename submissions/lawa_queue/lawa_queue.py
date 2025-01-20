@@ -253,7 +253,6 @@ class LAWA():
       self.every_step = math.ceil(workload.step_hint * hyperparameters.lawa_every_pct)
     logging.info('=== Running LAWA with self.every_step = %d ===', self.every_step)
 
-
   def store_tmp_params(self, params):
     self.tmp_params = [p.detach().cpu() for p in params]
 
