@@ -294,7 +294,7 @@ def check_existing_wandb_run(project_name, configs, hyperparameters):
     to_match_config = {**hyperparameters._asdict(), **flags_config}
 
     logging.info(f"Checking for existing runs on wandb...")
-    logging.info(f"Matching config: {to_match_config}\n\n")
+    # logging.info(f"Matching config: {to_match_config}\n\n")
     for run in runs:
       run_config_filtered = {k: run.config.get(k) for k in to_match_config.keys()}
       # Handle floating-point comparisons
