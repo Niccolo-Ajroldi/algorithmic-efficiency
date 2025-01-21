@@ -21,7 +21,7 @@
     "feasible_points": [0.05]
   },
   "cool_mode": {
-    "feasible_points": [false]
+    "feasible_points": [true]
   },
   "cool_steps": {
     "feasible_points": [1000]
