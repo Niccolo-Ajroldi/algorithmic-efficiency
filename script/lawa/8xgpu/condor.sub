@@ -2,7 +2,7 @@
 LOGS_DIR=/fast/najroldi/logs/algoperf
 EXE=/home/najroldi/algorithmic-efficiency/script/lawa/8xgpu/auto_run.sh
 
-workload=imagenet_vit
+workload=ogbg
 framework=pytorch
 
 # ## NadamW
@@ -29,9 +29,9 @@ framework=pytorch
 
 ## SHAMPOO
 submission=submissions/AlgoPerf_Team_21/external_tuning/shampoo_submission/submission.py
-search_space=script/lawa/shampoo/trial_1.json
+search_space=script/lawa/shampoo/trial_4.json
 num_tuning_trials=1
-study=5
+study=3
 name=shampoo_01
 rng_seed=$(study)
 allow_tf_32=0
