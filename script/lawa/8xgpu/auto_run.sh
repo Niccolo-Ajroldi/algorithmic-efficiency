@@ -8,8 +8,8 @@ export HOME=/home/najroldi
 export CODE_DIR=/home/najroldi/algorithmic-efficiency
 export EXP_DIR=/fast/najroldi/exp/algoperf
 export DATA_DIR=/fast/najroldi/data
-# export CUDA_LAUNCH_BLOCKING=1
-# export TORCH_USE_CUDA_DSA=1
+export CUDA_LAUNCH_BLOCKING=1
+export TORCH_USE_CUDA_DSA=1
 export TMPDIR=/fast/najroldi/tmp
 
 module load cuda/11.8
