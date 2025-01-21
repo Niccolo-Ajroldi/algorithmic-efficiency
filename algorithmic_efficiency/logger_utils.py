@@ -14,6 +14,7 @@ from typing import Any, Dict, Optional
 from absl import flags
 from clu import metric_writers
 import GPUtil
+from math import isclose
 import pandas as pd
 import psutil
 import torch.distributed as dist
@@ -281,6 +282,39 @@ def get_meta_data(workload: spec.Workload,
   return meta_data
 
 
+def check_existing_wandb_run(project_name, configs, hyperparameters):
+    api = wandb.Api()
+    runs = api.runs(f"ajnico/{project_name}")
+    
+    # Extract important flags from configs
+    flags_config = {k: getattr(configs, k) for k in {
+      "submission_path", "workload", "framework", "run_until_the_end", "save_checkpoints", "resume_last_run"
+    }}
+    # Combine hyperparameters and flags into one config to match
+    to_match_config = {**hyperparameters._asdict(), **flags_config}
+
+    logging.info(f"Checking for existing runs on wandb...")
+    logging.info(f"Matching config: {to_match_config}\n\n")
+    for run in runs:
+      run_config_filtered = {k: run.config.get(k) for k in to_match_config.keys()}
+      # Handle floating-point comparisons
+      all_match = True
+      for k, v in to_match_config.items():
+        run_value = run_config_filtered.get(k)
+        if isinstance(v, float) and isinstance(run_value, float):
+          if not isclose(v, run_value, rel_tol=1e-5, abs_tol=1e-5):
+            all_match = False
+            break
+        else:
+          if v != run_value:
+            all_match = False
+            break
+      if all_match:
+        logging.info(f"Matching run found: {run.name}")
+        return True
+    return False
+
+
 class MetricLogger(object):
   """Used to log all measurements during training.
 
@@ -299,14 +333,21 @@ class MetricLogger(object):
     self._eval_csv_path = eval_csv_path
     self.use_wandb = configs.use_wandb
 
+    PROJECT_NAME = "algoperf_lawa"
+
     if events_dir:
       self._tb_metric_writer = metric_writers.create_default_writer(events_dir)
+
       if wandb is not None and self.use_wandb:
+        if check_existing_wandb_run(PROJECT_NAME, configs, hyperparameters):
+          raise FileExistsError("A run with the same config exists. Aborting.")
+
         os.environ["WANDB__SERVICE_WAIT"] = "600"  # (nico)
         os.environ["WANDB_HTTP_TIMEOUT"] = "600"  # (nico)
         # os.environ["WANDB_SILENT"] = "true"  # (nico)
+  
         wandb.init(
-            project='algoperf_lawa',  # (nico)
+            project=PROJECT_NAME,  # (nico)
             name=configs.experiment_name,  # (nico)
             dir=events_dir, 
             tags=[flags.FLAGS.workload, flags.FLAGS.framework])
