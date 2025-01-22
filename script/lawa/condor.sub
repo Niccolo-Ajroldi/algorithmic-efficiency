@@ -2,32 +2,32 @@
 LOGS_DIR=/fast/najroldi/logs/algoperf
 EXE=/home/najroldi/algorithmic-efficiency/script/lawa/auto_run.sh
 
-workload=librispeech_deepspeech
+workload=wmt
 framework=pytorch
 
-# ## NadamW - Target Setting
-# submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_target_setting.py
-# search_space=reference_algorithms/target_setting_algorithms/librispeech_deepspeech/tuning_search_space.json
-# num_tuning_trials=1
-# study=1
-# name=nadamw_target_setting_01
-# rng_seed=$(study)
-# allow_tf_32=1
-# run_until_the_end=1
-# target_setting=1
-# num_jobs=$(num_tuning_trials)
-
-## LAWA - Target Setting
-submission=submissions/lawa_ema/nadamw_target_setting_ema.py
-search_space=reference_algorithms/target_setting_algorithms/librispeech_deepspeech/ema_01.json
+## NadamW - Target Setting
+submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_target_setting.py
+search_space=reference_algorithms/target_setting_algorithms/$(workload)/tuning_search_space.json
 num_tuning_trials=1
-study=1
-name=lawa_target_setting_01
+study=3
+name=nadamw_target_setting_01
 rng_seed=$(study)
 allow_tf_32=1
 run_until_the_end=1
 target_setting=1
 num_jobs=$(num_tuning_trials)
+
+# ## LAWA - Target Setting
+# submission=submissions/lawa_ema/nadamw_target_setting_ema.py
+# search_space=reference_algorithms/target_setting_algorithms/$(workload)/ema_01.json
+# num_tuning_trials=1
+# study=3
+# name=lawa_target_setting_01
+# rng_seed=$(study)
+# allow_tf_32=1
+# run_until_the_end=1
+# target_setting=1
+# num_jobs=$(num_tuning_trials)
 
 # ## NadamW
 # submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
