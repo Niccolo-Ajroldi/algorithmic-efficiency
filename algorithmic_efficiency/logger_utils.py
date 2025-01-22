@@ -288,7 +288,10 @@ def check_existing_wandb_run(project_name, configs, hyperparameters):
     
     # Extract important flags from configs
     flags_config = {k: getattr(configs, k) for k in {
-      "submission_path", "workload", "framework", "run_until_the_end", "save_checkpoints", "resume_last_run"
+      "submission_path", "workload", "framework", 
+      "rng_seed", "deterministic",
+      "run_until_the_end", "save_checkpoints", 
+      "resume_last_run", "resume_experiment_name"
     }}
     # Combine hyperparameters and flags into one config to match
     to_match_config = {**hyperparameters._asdict(), **flags_config}
