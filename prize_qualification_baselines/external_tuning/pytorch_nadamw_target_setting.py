@@ -217,8 +217,15 @@ def init_optimizer_state(workload: spec.Workload,
               weight_decay=hyperparameters.weight_decay),
   }
 
-  def pytorch_cosine_warmup(step_hint: int, hyperparameters, optimizer):
-    warmup_steps = int(hyperparameters.warmup_factor * step_hint)
+  def pytorch_cosine_warmup(step_hint: int, hyperparameters, optimizer):  
+    # Deal with old submission search spaces.
+    if hasattr(hyperparameters, 'warmup_steps'):
+      warmup_steps = hyperparameters.warmup_steps
+    elif hasattr(hyperparameters, 'warmup_factor'):
+      warmup_steps = int(hyperparameters.warmup_factor * step_hint)
+    else:
+      raise ValueError('Missing warmup_steps or warmup_factor in hyperparameters.')
+
     warmup = LinearLR(
         optimizer, start_factor=1e-10, end_factor=1., total_iters=warmup_steps)
     cosine_steps = max(step_hint - warmup_steps, 1)

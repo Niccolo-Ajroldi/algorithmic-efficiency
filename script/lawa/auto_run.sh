@@ -25,9 +25,10 @@ name=$7
 rng_seed=$8
 allow_tf_32=$9
 run_until_the_end=${10}
+target_setting=${11}
 
-cluster_id=${11}
-process_id=${12}
+cluster_id=${12}
+process_id=${13}
 
 # CONDOR job arrays range from 0 to n-1, so we add +1 here
 # $((...)) is for arithmetic substitution in .sh
@@ -86,6 +87,12 @@ if [ "$run_until_the_end" == "1" ]; then
   run_until_the_end_flag=True
 fi
 
+# max_pct_of_global_steps
+max_pct_of_global_steps=
+if [ "$target_setting" == "1" ]; then
+  max_pct_of_global_steps=0.75
+fi
+
 # Execute python script
 OMP_NUM_THREADS=1 torchrun \
   --redirects 1:0,2:0,3:0 \
@@ -116,6 +123,7 @@ OMP_NUM_THREADS=1 torchrun \
   --halve_CUDA_mem=False \
   --pytorch_eval_num_workers=$pytorch_eval_num_workers \
   --resume_last_run \
+  --max_pct_of_global_steps=$max_pct_of_global_steps \
   --cluster_id $cluster_id \
   --process_id $process_id
 
