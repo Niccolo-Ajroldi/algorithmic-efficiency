@@ -1,24 +1,15 @@
-"""
-LAWA ema on NAdamW optimizer with warmup+cosine LR in PyTorch.
-LAWA ema offloaded to cpu.
-
-Hyperparameters:
-  - lawa_burnin_pct
-  - lawa_every_pct
-  - lawa_beta
-
-TODO: explore Tensor.copy_(orig, non_blocking=True)
-"""
+"""Submission file for an NAdamW optimizer with warmup+cosine LR in PyTorch."""
 
 import math
-from typing import Dict, Iterator, List, Tuple
-
-from itertools import islice
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 from absl import logging
 import torch
 from torch import Tensor
 import torch.distributed.nn as dist_nn
+from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.optim.lr_scheduler import LinearLR
+from torch.optim.lr_scheduler import SequentialLR
 
 from algorithmic_efficiency import spec
 from algorithmic_efficiency.pytorch_utils import pytorch_setup
@@ -198,39 +189,6 @@ def nadamw(params: List[Tensor],
     exp_avg.sub_(grad, alpha=1 - beta1).div_(beta1)
 
 
-class WarmCosine(object):
-  def __init__(self, optimizer, lr_min, lr_max, warmup_steps, T):
-    self.optimizer = optimizer
-    self.lr_min = lr_min
-    self.lr_max = lr_max
-    self.warmup_steps = warmup_steps
-    self.T = T
-    self.t = 0
-    for group in self.optimizer.param_groups:
-      group["lr"] = lr_min
-    
-  def schedule(self, t):
-    if t <= self.warmup_steps:
-      return self.lr_min + (self.lr_max-self.lr_min)/self.warmup_steps * t
-    elif t <= self.T:
-      return self.lr_min + 0.5 * (self.lr_max-self.lr_min) * (1 + math.cos((t-self.warmup_steps) * math.pi / (self.T-self.warmup_steps)))
-    return self.lr_min
-
-  def step(self):
-    self.t += 1
-    # get LR for this step
-    lr = self.schedule(self.t)
-    # set LR in optimizer
-    for group in self.optimizer.param_groups:
-      group["lr"] = lr
-
-  def state_dict(self):
-    return {key: value for key, value in self.__dict__.items() if key != "optimizer"}
-
-  def load_state_dict(self, state_dict):
-    self.__dict__.update(state_dict)
-
-
 class LAWA():
   def __init__(self, hyperparameters, workload) -> None:
     self.tmp_params = None
@@ -280,39 +238,62 @@ def init_optimizer_state(workload: spec.Workload,
   del model_state
   del rng
 
-  optimizer_state = {}
+  # Deal with old submission search spaces.
+  if hasattr(hyperparameters, 'beta1'):
+    beta1 = hyperparameters.beta1
+  elif hasattr(hyperparameters, 'one_minus_beta1'):
+    beta1 = 1.0 - hyperparameters.betone_minus_beta1a1
+  else:
+    raise ValueError('Missing beta1 in hyperparameters.')
 
-  optimizer_state['optimizer'] = NAdamW(
-      model_params.parameters(),
-      lr=hyperparameters.learning_rate,
-      betas=(1.0 - hyperparameters.one_minus_beta1,
-              hyperparameters.beta2),
-      eps=1e-8,
-      weight_decay=hyperparameters.weight_decay)
+  optimizer_state = {
+      'optimizer':
+          NAdamW(
+              model_params.parameters(),
+              lr=hyperparameters.learning_rate,
+              betas=(beta1,
+                     hyperparameters.beta2),
+              eps=1e-8,
+              weight_decay=hyperparameters.weight_decay),
+  }
   
   optimizer_state['lawa'] = LAWA(hyperparameters, workload)
-    
-  optimizer_state['scheduler'] = WarmCosine(
-      optimizer_state['optimizer'], 
-      lr_min = 1e-10, 
-      lr_max = hyperparameters.learning_rate, 
-      warmup_steps = int(hyperparameters.warmup_factor * workload.step_hint), 
-      T = workload.step_hint)
+
+  def pytorch_cosine_warmup(step_hint: int, hyperparameters, optimizer):  
+    # Deal with old submission search spaces.
+    if hasattr(hyperparameters, 'warmup_steps'):
+      warmup_steps = hyperparameters.warmup_steps
+    elif hasattr(hyperparameters, 'warmup_factor'):
+      warmup_steps = int(hyperparameters.warmup_factor * step_hint)
+    else:
+      raise ValueError('Missing warmup_steps or warmup_factor in hyperparameters.')
+
+    warmup = LinearLR(
+        optimizer, start_factor=1e-10, end_factor=1., total_iters=warmup_steps)
+    cosine_steps = max(step_hint - warmup_steps, 1)
+    cosine_decay = CosineAnnealingLR(optimizer, T_max=cosine_steps)
+    return SequentialLR(
+        optimizer, schedulers=[warmup, cosine_decay], milestones=[warmup_steps])
+
+  optimizer_state['scheduler'] = pytorch_cosine_warmup(
+      workload.step_hint * 0.75, hyperparameters, optimizer_state['optimizer'])
 
   return optimizer_state
 
 
-def update_params(workload: spec.Workload,
-                  current_param_container: spec.ParameterContainer,
-                  current_params_types: spec.ParameterTypeTree,
-                  model_state: spec.ModelAuxiliaryState,
-                  hyperparameters: spec.Hyperparameters,
-                  batch: Dict[str, spec.Tensor],
-                  loss_type: spec.LossType,
-                  optimizer_state: spec.OptimizerState,
-                  eval_results: List[Tuple[int, float]],
-                  global_step: int,
-                  rng: spec.RandomState) -> spec.UpdateReturn:
+def update_params(
+    workload: spec.Workload,
+    current_param_container: spec.ParameterContainer,
+    current_params_types: spec.ParameterTypeTree,
+    model_state: spec.ModelAuxiliaryState,
+    hyperparameters: spec.Hyperparameters,
+    batch: Dict[str, spec.Tensor],
+    loss_type: spec.LossType,
+    optimizer_state: spec.OptimizerState,
+    eval_results: List[Tuple[int, float]],
+    global_step: int,
+    rng: spec.RandomState,
+    train_state: Optional[Dict[str, Any]] = None) -> spec.UpdateReturn:
   """Return (updated_optimizer_state, updated_params, updated_model_state)."""
   del current_params_types
   del loss_type
@@ -328,6 +309,7 @@ def update_params(workload: spec.Workload,
       p.data.copy_(p_old.data)
     lawa.tmp_params = None
 
+  current_model = current_param_container
   current_model.train()
   optimizer_state['optimizer'].zero_grad()
 
