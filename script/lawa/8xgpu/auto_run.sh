@@ -8,9 +8,13 @@ export HOME=/home/najroldi
 export CODE_DIR=/home/najroldi/algorithmic-efficiency
 export EXP_DIR=/fast/najroldi/exp/algoperf
 export DATA_DIR=/fast/najroldi/data
-export CUDA_LAUNCH_BLOCKING=1
-export TORCH_USE_CUDA_DSA=1
 export TMPDIR=/fast/najroldi/tmp
+
+# export CUDA_LAUNCH_BLOCKING=1
+# export TORCH_USE_CUDA_DSA=1
+
+# export NCCL_IB_DISABLE=1
+# export NCCL_P2P_DISABLE=1
 
 module load cuda/11.8
 
@@ -94,7 +98,6 @@ fi
 # Execute python script
 torchrun \
   --redirects 1:0,2:0,3:0,4:0,5:0,6:0,7:0 \
-  --standalone \
   --nnodes=1 \
   --nproc_per_node=8 \
   $CODE_DIR/submission_runner.py \
