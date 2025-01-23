@@ -2,7 +2,7 @@
 LOGS_DIR=/fast/najroldi/logs/algoperf
 EXE=/home/najroldi/algorithmic-efficiency/script/lawa/save_ckpt/run.sh
 
-workload=imagenet_vit
+workload=criteo1tb
 framework=pytorch
 
 ## NadamW
@@ -17,10 +17,10 @@ name=nadamw_newp_01
 resume_experiment_name=None
 resume_last_run=False
 
-eval_every_n_steps=2048
+eval_every_n_steps=256
 save_checkpoints=True
 save_intermediate_checkpoints=True
-save_ckpt_freq=64
+save_ckpt_freq=1
 
 rng_seed=$(study)
 allow_tf_32=True
