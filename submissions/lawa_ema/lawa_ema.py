@@ -316,7 +316,6 @@ def update_params(workload: spec.Workload,
   """Return (updated_optimizer_state, updated_params, updated_model_state)."""
   del current_params_types
   del loss_type
-  del train_state
   del eval_results
 
   lawa = optimizer_state['lawa']

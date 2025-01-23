@@ -9,6 +9,9 @@ export CODE_DIR=/home/najroldi/algorithmic-efficiency
 export EXP_DIR=/fast/najroldi/exp/algoperf
 export DATA_DIR=/fast/najroldi/data
 
+export HTTP_PROXY=$http_proxy
+export HTTPS_PROXY=$https_proxy
+
 # # Will this allow to set pytorch_eval_num_workers=0? -> yes
 # # will it allow to have correct evals on workers>1 ??
 # export OMP_NUM_THREADS=1 
@@ -88,7 +91,7 @@ if [ "$run_until_the_end" == "1" ]; then
 fi
 
 # max_pct_of_global_steps
-max_pct_of_global_steps=
+max_pct_of_global_steps=1.0
 if [ "$target_setting" == "1" ]; then
   max_pct_of_global_steps=0.75
 fi

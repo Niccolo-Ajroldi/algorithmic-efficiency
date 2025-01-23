@@ -467,6 +467,7 @@ def train_once(
       train_state['training_complete'] = True
     # (nico): train for a fixed pct of step_hint
     if (max_pct_of_global_steps is not None) and \
+        (max_pct_of_global_steps < 1.0) and \
         (global_step / workload.step_hint >= max_pct_of_global_steps):
       train_state['training_complete'] = True
 

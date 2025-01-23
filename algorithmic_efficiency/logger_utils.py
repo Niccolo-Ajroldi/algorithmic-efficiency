@@ -297,25 +297,52 @@ def check_existing_wandb_run(project_name, configs, hyperparameters):
     to_match_config = {**hyperparameters._asdict(), **flags_config}
 
     logging.info(f"Checking for existing runs on wandb...")
-    # logging.info(f"Matching config: {to_match_config}\n\n")
+    logging.info(f"Matching config: {to_match_config}\n\n")
+    
+    # Separate non-float and float keys
+    non_float_config = {k: v for k, v in to_match_config.items() if not isinstance(v, float)}
+    float_config = {k: v for k, v in to_match_config.items() if isinstance(v, float)}
+
+    # Step 1: Filter runs using non-float keys
+    runs = api.runs(
+      f"ajnico/{project_name}",
+      filters={"$and": [{"config.{}".format(k): v} for k, v in non_float_config.items()]}
+    )
+    if not runs:  # If no matches are found in the first stage
+      return False
+
+    # Step 2: Refine matches using float attributes only
     for run in runs:
-      run_config_filtered = {k: run.config.get(k) for k in to_match_config.keys()}
-      # Handle floating-point comparisons
-      all_match = True
-      for k, v in to_match_config.items():
-        run_value = run_config_filtered.get(k)
-        if isinstance(v, float) and isinstance(run_value, float):
-          if not isclose(v, run_value, rel_tol=1e-5, abs_tol=1e-5):
-            all_match = False
-            break
-        else:
-          if v != run_value:
-            all_match = False
-            break
-      if all_match:
-        logging.info(f"Matching run found: {run.name}")
+      if all(
+        isclose(v, run.config.get(k), rel_tol=1e-5, abs_tol=1e-5)
+        for k, v in float_config.items()
+      ):
+        logging.info(f"Matching run found with refined checks: {run.name}")
         return True
+
     return False
+  
+    # # Fetch runs filtered by the matching config
+    # runs = api.runs(f"ajnico/{project_name}", filters={"config": to_match_config})
+    
+    # for run in runs:
+    #   run_config_filtered = {k: run.config.get(k) for k in to_match_config.keys()}
+    #   # Handle floating-point comparisons
+    #   all_match = True
+    #   for k, v in to_match_config.items():
+    #     run_value = run_config_filtered.get(k)
+    #     if isinstance(v, float) and isinstance(run_value, float):
+    #       if not isclose(v, run_value, rel_tol=1e-5, abs_tol=1e-5):
+    #         all_match = False
+    #         break
+    #     else:
+    #       if v != run_value:
+    #         all_match = False
+    #         break
+    #   if all_match:
+    #     logging.info(f"Matching run found: {run.name}")
+    #     return True
+    # return False
 
 
 class MetricLogger(object):

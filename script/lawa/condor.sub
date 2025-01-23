@@ -2,20 +2,20 @@
 LOGS_DIR=/fast/najroldi/logs/algoperf
 EXE=/home/najroldi/algorithmic-efficiency/script/lawa/auto_run.sh
 
-workload=wmt
-framework=pytorch
+# workload=ogbg
+# framework=pytorch
 
-## NadamW - Target Setting
-submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_target_setting.py
-search_space=reference_algorithms/target_setting_algorithms/$(workload)/tuning_search_space.json
-num_tuning_trials=1
-study=3
-name=nadamw_target_setting_01
-rng_seed=$(study)
-allow_tf_32=1
-run_until_the_end=1
-target_setting=1
-num_jobs=$(num_tuning_trials)
+# ## NadamW - Target Setting
+# submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_target_setting.py
+# search_space=reference_algorithms/target_setting_algorithms/$(workload)/tuning_search_space.json
+# num_tuning_trials=1
+# study=3
+# name=nadamw_target_setting_01
+# rng_seed=$(study)
+# allow_tf_32=1
+# run_until_the_end=1
+# target_setting=1
+# num_jobs=$(num_tuning_trials)
 
 # ## LAWA - Target Setting
 # submission=submissions/lawa_ema/nadamw_target_setting_ema.py
@@ -41,17 +41,20 @@ num_jobs=$(num_tuning_trials)
 # target_setting=0
 # num_jobs=$(num_tuning_trials)
 
-# ## LAWA
-# submission=submissions/lawa_queue/lawa_queue.py
-# search_space=script/lawa/queue/lawa_trial_3_tune_02.json
-# num_tuning_trials=8
-# study=3
-# name=lawa_queue_big_sweep_03
-# rng_seed=$(study)
-# allow_tf_32=1
-# run_until_the_end=0
-# target_setting=0
-# num_jobs=$(num_tuning_trials)
+workload=librispeech_deepspeech
+framework=pytorch
+
+## LAWA
+submission=submissions/lawa_queue/lawa_queue.py
+search_space=script/lawa/queue/lawa_trial_5_tune_22.json
+num_tuning_trials=12
+study=1
+name=lawa_ema_big_sweep_10
+rng_seed=$(study)
+allow_tf_32=1
+run_until_the_end=0
+target_setting=0
+num_jobs=$(num_tuning_trials)
 
 # Args
 executable = $(EXE)
