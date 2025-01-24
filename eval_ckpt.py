@@ -745,4 +745,6 @@ if __name__ == '__main__':
   flags.mark_flag_as_required('submission_path')
   flags.mark_flag_as_required('experiment_dir')
   flags.mark_flag_as_required('experiment_name')
+  flags.mark_flag_as_required('baseline_ckpt_dir')
+  flags.mark_flag_as_required('eval_every_n_steps')
   app.run(main)

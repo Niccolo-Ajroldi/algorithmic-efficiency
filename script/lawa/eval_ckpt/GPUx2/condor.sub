@@ -1,0 +1,63 @@
+# Define variables
+LOGS_DIR=/fast/najroldi/logs/algoperf
+EXE=/home/najroldi/algorithmic-efficiency/script/lawa/eval_ckpt/GPUx2/run.sh
+
+workload=librispeech_conformer
+framework=pytorch
+
+# ## LAWA Offline
+# submission=submissions/lawa_queue/lawa_queue_offline_fast.py
+# search_space=reference_algorithms/target_setting_algorithms/$(workload)/lawa_01.json
+# name=lawa_newp_01
+
+## EMA Offline
+submission=submissions/lawa_ema/lawa_ema_offline.py
+search_space=reference_algorithms/target_setting_algorithms/$(workload)/ema_01.json
+name=ema_newp_01
+
+num_tuning_trials=36
+study=1
+
+baseline_name=nadamw_newp_01
+baseline_ckpt_dir=/fast/najroldi/exp/algoperf/$(baseline_name)_study_$(study)/$(workload)_$(framework)/trial_1
+eval_every_n_steps=2048
+
+rng_seed=$(study)
+allow_tf_32=True
+run_until_the_end=True
+target_setting=True
+
+num_jobs=$(num_tuning_trials)
+
+# Args
+executable = $(EXE)
+arguments = \
+  $(workload) \
+  $(framework) \
+  $(submission) \
+  $(search_space) \
+  $(num_tuning_trials) \
+  $(study) \
+  $(name) \
+  $(baseline_ckpt_dir) \
+  $(eval_every_n_steps) \
+  $(rng_seed) \
+  $(allow_tf_32) \
+  $(run_until_the_end) \
+  $(target_setting) \
+  $(Cluster) \
+  $(Process)
+
+# Logs
+error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
+output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
+log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
+
+# Specs
+request_memory = 200000
+request_cpus = 18
+request_gpus = 2
+requirements = TARGET.CUDACapability >= 8.0
+# requirements = TARGET.CUDACapability >= 8.0 && (TARGET.Machine != "g147.internal.cluster.is.localnet")
+
+queue $(num_jobs)

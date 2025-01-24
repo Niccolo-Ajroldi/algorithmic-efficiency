@@ -31,12 +31,12 @@
     },
     "lawa_every_steps": {
       "feasible_points": [
-          128
+            64, 128, 256, 512, 1024, 2048
       ]
     },
     "lawa_beta": {
         "feasible_points": [
-            0.9
+            0.3, 0.6, 0.8, 0.9, 0.95, 0.99
         ]
     }
 }

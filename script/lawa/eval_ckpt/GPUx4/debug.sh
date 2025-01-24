@@ -14,24 +14,22 @@ export HTTP_PROXY=$http_proxy
 export HTTPS_PROXY=$https_proxy
 
 # Job specific vars
-workload=${1}
-framework=${2}
-submission=${3}
-search_space=${4}
-num_tuning_trials=${5}
-study=${6}
+workload=librispeech_conformer
+framework=pytorch
+submission=submissions/lawa_ema/lawa_ema_offline.py
+search_space="reference_algorithms/target_setting_algorithms/${workload}/ema_01.json"
+num_tuning_trials=1
+study=2
 
-name=${7}
-baseline_ckpt_dir=${8}
-eval_every_n_steps=${9}
+name=eval_ckpt_newp_debug_ema_01
+baseline_ckpt_dir=/fast/najroldi/exp/algoperf/nadamw_newp_01_study_1/librispeech_conformer_pytorch/trial_1
+eval_every_n_steps=2048
 
-rng_seed=${10}
-allow_tf_32=${11}
-run_until_the_end=${12}
-target_setting=${13}
 
-cluster_id=${14}
-process_id=${15}
+rng_seed=2
+allow_tf_32=True
+run_until_the_end=True
+target_setting=True
 
 # CONDOR job arrays range from 0 to n-1, so we add +1 here
 # $((...)) is for arithmetic substitution in .sh
@@ -98,10 +96,10 @@ fi
 
 # Execute python script
 OMP_NUM_THREADS=1 torchrun \
-  --redirects 1:0,2:0,3:0 \
+  --redirects 1:0 \
   --standalone \
   --nnodes=1 \
-  --nproc_per_node=4 \
+  --nproc_per_node=2 \
   $CODE_DIR/eval_ckpt.py \
   --workload=$workload \
   --framework=$framework \
@@ -120,6 +118,7 @@ OMP_NUM_THREADS=1 torchrun \
   --eval_every_n_steps=$eval_every_n_steps \
   --save_checkpoints=False \
   --save_intermediate_checkpoints=False \
+  --baseline_ckpt_dir=$baseline_ckpt_dir \
   --overwrite \
   --use_wandb \
   --rng_seed=$rng_seed \
@@ -129,8 +128,6 @@ OMP_NUM_THREADS=1 torchrun \
   --halve_CUDA_mem=False \
   --pytorch_eval_num_workers=$pytorch_eval_num_workers \
   --log_lr=False \
-  --max_pct_of_global_steps=$max_pct_of_global_steps \
-  --cluster_id $cluster_id \
-  --process_id $process_id
+  --max_pct_of_global_steps=$max_pct_of_global_steps
 
 # resuming is needed with multiple paralell processes accessing the same dir
