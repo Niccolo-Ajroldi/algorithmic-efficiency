@@ -146,7 +146,7 @@ def prepare_for_eval(workload: spec.Workload,
   if lawa.full():  # redundant
     avg = lawa.avg()  # compute avg on CPU
     for p, p_avg in zip(current_model.parameters(), avg):
-        p.data.copy_(p_avg.data)  # move avg to GPU
+      p.data.copy_(p_avg.data)  # move avg to GPU
 
   return (optimizer_state, current_model, model_state)
 

@@ -255,14 +255,6 @@ def _reset_cuda_mem():
     gc.collect()
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
-  
-  if FLAGS.deterministic:
-    if FLAGS.framework == 'pytorch':
-      torch.use_deterministic_algorithms(True)
-      os.environ["CUBLAS_WORKSPACE_CONFIG"]=":4096:8"
-      torch.backends.cudnn.benchmark = False
-    else:
-      raise ValueError('Deterministic mode is only supported in PyTorch.')
 
 
 def train_once(
@@ -848,6 +840,10 @@ def main(_):
     else:
       torch.backends.cuda.matmul.allow_tf32 = False
       torch.backends.cudnn.allow_tf32 = False
+    if FLAGS.deterministic:
+      torch.use_deterministic_algorithms(True)
+      os.environ["CUBLAS_WORKSPACE_CONFIG"]=":4096:8"
+      torch.backends.cudnn.benchmark = False
 
   if FLAGS.profile:
     profiler = Profiler()

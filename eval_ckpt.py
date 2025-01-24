@@ -655,6 +655,10 @@ def main(_):
     else:
       torch.backends.cuda.matmul.allow_tf32 = False
       torch.backends.cudnn.allow_tf32 = False
+    if FLAGS.deterministic:
+      torch.use_deterministic_algorithms(True)
+      os.environ["CUBLAS_WORKSPACE_CONFIG"]=":4096:8"
+      torch.backends.cudnn.benchmark = False
 
   if FLAGS.profile:
     profiler = Profiler()

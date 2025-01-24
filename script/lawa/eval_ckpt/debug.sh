@@ -16,12 +16,12 @@ export HTTPS_PROXY=$https_proxy
 # Job specific vars
 workload=librispeech_conformer
 framework=pytorch
-submission=submissions/lawa_queue/lawa_queue_offline.py
+submission=submissions/lawa_queue/lawa_queue_offline_slow.py
 search_space="reference_algorithms/target_setting_algorithms/${workload}/lawa_01.json"
 num_tuning_trials=1
-study=1
+study=2
 
-name=eval_ckpt_newp_debug_01
+name=eval_ckpt_newp_debug_02_SLOW
 eval_every_n_steps=2048
 save_checkpoints=False
 save_intermediate_checkpoints=False
@@ -29,7 +29,7 @@ save_ckpt_freq=1
 
 baseline_ckpt_dir=/fast/najroldi/exp/algoperf/nadamw_newp_01_study_1/librispeech_conformer_pytorch/trial_1
 
-rng_seed=1
+rng_seed=2
 allow_tf_32=True
 run_until_the_end=True
 target_setting=True
@@ -149,6 +149,8 @@ OMP_NUM_THREADS=1 torchrun \
   --pytorch_eval_num_workers=$pytorch_eval_num_workers \
   --use_wandb \
   --max_pct_of_global_steps=$max_pct_of_global_steps
+
+  # --deterministic=True \
 
 
 # resuming is needed with multiple paralell processes accessing the same dir
