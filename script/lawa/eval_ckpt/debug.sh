@@ -16,12 +16,12 @@ export HTTPS_PROXY=$https_proxy
 # Job specific vars
 workload=librispeech_conformer
 framework=pytorch
-submission=submissions/lawa_queue/lawa_queue_offline_slow.py
-search_space="reference_algorithms/target_setting_algorithms/${workload}/lawa_01.json"
+submission=submissions/lawa_ema/lawa_ema_offline.py
+search_space="reference_algorithms/target_setting_algorithms/${workload}/ema_01.json"
 num_tuning_trials=1
 study=2
 
-name=eval_ckpt_newp_debug_04_SLOW
+name=eval_ckpt_newp_debug_ema_01
 baseline_ckpt_dir=/fast/najroldi/exp/algoperf/nadamw_newp_01_study_1/librispeech_conformer_pytorch/trial_1
 eval_every_n_steps=2048
 

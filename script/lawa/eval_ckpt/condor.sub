@@ -5,15 +5,24 @@ EXE=/home/najroldi/algorithmic-efficiency/script/lawa/eval_ckpt/run.sh
 workload=criteo1tb
 framework=pytorch
 
-## NadamW
-submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_target_setting.py
-search_space=reference_algorithms/target_setting_algorithms/$(workload)/tuning_search_space.json
+# ## NadamW
+# submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_target_setting.py
+# search_space=reference_algorithms/target_setting_algorithms/$(workload)/tuning_search_space.json
 
-num_tuning_trials=1
+# ## LAWA Offline
+# submission=submissions/lawa_queue/lawa_queue_offline_fast.py
+# search_space=reference_algorithms/target_setting_algorithms/$(workload)/lawa_01.json
+
+## EMA Offline
+submission=submissions/lawa_ema/lawa_ema_offline.py
+search_space=reference_algorithms/target_setting_algorithms/$(workload)/ema_01.json
+
+num_tuning_trials=36
 study=1
 
-name=nadamw_newp_01
-baseline_ckpt_dir=/fast/najroldi/exp/algoperf/nadamw_newp_01_study_1/librispeech_conformer_pytorch/trial_1
+name=lawa_newp_01
+baseline_name=nadamw_newp_01
+baseline_ckpt_dir=/fast/najroldi/exp/algoperf/$(baseline_name)_study_$(study)/$(workload)_$(framework)/trial_1
 eval_every_n_steps=2048
 
 rng_seed=$(study)

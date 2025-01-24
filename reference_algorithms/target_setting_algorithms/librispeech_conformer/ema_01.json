@@ -29,10 +29,10 @@
             0.0
         ]
     },
-    "lawa_every_pct": {
-        "feasible_points": [
-            0.0002
-        ]
+    "lawa_every_steps": {
+      "feasible_points": [
+          128
+      ]
     },
     "lawa_beta": {
         "feasible_points": [
