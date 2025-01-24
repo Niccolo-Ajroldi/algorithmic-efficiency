@@ -290,7 +290,8 @@ def check_existing_wandb_run(project_name, configs, hyperparameters):
     flags_config = {k: getattr(configs, k) for k in {
       "submission_path", "workload", "framework", 
       "rng_seed", "deterministic",
-      "run_until_the_end", "save_checkpoints", 
+      "max_pct_of_global_steps", "eval_every_n_steps",
+      "run_until_the_end", "save_checkpoints", "save_ckpt_freq",
       "resume_last_run", "resume_experiment_name"
     }}
     # Combine hyperparameters and flags into one config to match
