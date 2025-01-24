@@ -706,9 +706,9 @@ def main(_):
     FLAGS.workload,
     FLAGS.framework,
     experiment_name,
-    resume_last_run=False,
-    resume_experiment_name=None,
-    overwrite=True)
+    FLAGS.resume_last_run,
+    resume_experiment_name=None,  # (nico)
+    overwrite=FLAGS.overwrite)
 
   score = score_submission_on_workload(
       workload=workload,

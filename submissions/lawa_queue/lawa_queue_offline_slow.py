@@ -112,7 +112,7 @@ def update_params(workload: spec.Workload,
   if global_step >= lawa.start_step and global_step % lawa.every_step == 0:
     lawa.append(current_model.parameters())
   
-  logging.info(f"LAWA --- Queue length = {len(lawa.queue)}")
+  # logging.info(f"LAWA --- Queue length = {len(lawa.queue)}")
 
   return (optimizer_state, current_param_container, model_state)
 
@@ -140,7 +140,7 @@ def prepare_for_eval(workload: spec.Workload,
   if global_step < lawa.start_step or not lawa.full():
     return (optimizer_state, current_model, model_state)
 
-  logging.info(f"LAWA --- Loading avg into model")
+  # logging.info(f"LAWA --- Loading avg into model")
 
   # Load avg into model
   if lawa.full():  # redundant
