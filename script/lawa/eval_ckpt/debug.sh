@@ -21,13 +21,10 @@ search_space="reference_algorithms/target_setting_algorithms/${workload}/lawa_01
 num_tuning_trials=1
 study=2
 
-name=eval_ckpt_newp_debug_02_SLOW
-eval_every_n_steps=2048
-save_checkpoints=False
-save_intermediate_checkpoints=False
-save_ckpt_freq=1
-
+name=eval_ckpt_newp_debug_04_SLOW
 baseline_ckpt_dir=/fast/najroldi/exp/algoperf/nadamw_newp_01_study_1/librispeech_conformer_pytorch/trial_1
+eval_every_n_steps=2048
+
 
 rng_seed=2
 allow_tf_32=True
@@ -91,24 +88,6 @@ if [ "$run_until_the_end" == "True" ]; then
   run_until_the_end_flag=True
 fi
 
-# resume_last_run
-resume_last_run_flag=False
-if [ "$resume_last_run" == "True" ]; then
-  resume_last_run_flag=True
-fi
-
-# save_checkpoints
-save_checkpoints_flag=False
-if [ "$save_checkpoints" == "True" ]; then
-  save_checkpoints_flag=True
-fi
-
-# save_intermediate_checkpoints
-save_intermediate_checkpoints_flag=False
-if [ "$save_intermediate_checkpoints" == "True" ]; then
-  save_intermediate_checkpoints_flag=True
-fi
-
 # max_pct_of_global_steps
 max_pct_of_global_steps=1.0
 if [ "$target_setting" == "True" ]; then
@@ -135,11 +114,10 @@ OMP_NUM_THREADS=1 torchrun \
   --trial_index=$trial_index \
   --experiment_dir=$EXP_DIR  \
   --experiment_name=$experiment_name \
-  --resume_last_run=$resume_last_run_flag \
+  --resume_last_run=True \
   --eval_every_n_steps=$eval_every_n_steps \
-  --save_checkpoints=$save_checkpoints_flag \
-  --save_intermediate_checkpoints=$save_intermediate_checkpoints_flag \
-  --save_ckpt_freq=$save_ckpt_freq \
+  --save_checkpoints=False \
+  --save_intermediate_checkpoints=False \
   --baseline_ckpt_dir=$baseline_ckpt_dir \
   --overwrite \
   --rng_seed=$rng_seed \

@@ -417,7 +417,7 @@ def train_once(
         model_params = model_params.module
       model_params.load_state_dict(checkpoint_state['model_params'])
       checkpoint_state['model_params'] = model_params
-      logging.info(f'Loaded checkpoint from {ckpt_path_global_step}.')
+      # logging.info(f'Loaded checkpoint from {ckpt_path_global_step}.')
 
       try:
         with profiler.profile('Update parameters'):
