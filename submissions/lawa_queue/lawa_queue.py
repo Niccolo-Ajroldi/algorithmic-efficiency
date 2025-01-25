@@ -237,6 +237,7 @@ class LAWA():
     self.tmp_params = None
     self.maxlen = int(hyperparameters.lawa_queue_len)
     self.queue = deque(maxlen=self.maxlen)
+    self.running_avg = None
 
     self.start_step = math.ceil(workload.step_hint * hyperparameters.lawa_burnin_pct)
 
@@ -257,7 +258,23 @@ class LAWA():
     self.tmp_params = [p.detach().cpu() for p in params]
 
   def append(self, params):
-    self.queue.append([p.detach().cpu() for p in params])
+    new_params = [p.detach().cpu() for p in params]
+
+    # Remove oldest element from the running avg
+    if self.full():
+      removed_params = self.queue[0]
+      for avg, removed_p in zip(self.running_avg, removed_params):
+        avg.sub_(removed_p.div(self.maxlen))
+
+    # Update running average with the new parameters
+    if self.running_avg is None:
+      self.running_avg = [p.clone() for p in new_params]
+    else:
+      for avg, new_p in zip(self.running_avg, new_params):
+        avg.add_(new_p.div(self.maxlen))
+
+    # append pushes the new element into the queue and pops the oldest
+    self.queue.append(new_params)
 
   def full(self):
     return len(self.queue) == self.maxlen
