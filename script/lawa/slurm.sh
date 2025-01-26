@@ -1,18 +1,16 @@
 #!/bin/bash
 
-#SBATCH --job-name=lawa_ema
-#SBATCH --array=1-12
+#SBATCH --job-name=nadamw_prova_02
+#SBATCH --array=1-9
 #SBATCH --error=/ptmp/najroldi/logs/algoperf/err/%x_%A_%a.err
 #SBATCH --output=/ptmp/najroldi/logs/algoperf/out/%x_%A_%a.out
-#SBATCH --time=06:00:00
+#SBATCH --time=20:00:00
 #SBATCH --ntasks 1
 #SBATCH --requeue
 # --- 4 GPUs on a full node ---
 #SBATCH --gres=gpu:a100:4
-#SBATCH --cpus-per-task=32
-#SBATCH --mem=500000
-
-## TODO: set wandb dir as well!!
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=300000
 
 source ~/.bashrc
 conda activate alpe
@@ -21,33 +19,37 @@ export CODE_DIR=~/algorithmic-efficiency
 export EXP_DIR=/ptmp/najroldi/exp/algoperf
 export DATA_DIR=/ptmp/najroldi/data
 
-export HTTP_PROXY=$http_proxy
-export HTTPS_PROXY=$https_proxy
-
-# # Will this allow to set pytorch_eval_num_workers=0? -> yes
-# # will it allow to have correct evals on workers>1 ??
-# export OMP_NUM_THREADS=1 
-# export MKL_NUM_THREADS=1
+# export HTTP_PROXY=$http_proxy
+# export HTTPS_PROXY=$https_proxy
 
 # Job specific vars
-workload=$1
-framework=$2
-submission=$3
-search_space=$4
-num_tuning_trials=$5
-study=$6
-name=$7
-rng_seed=$8
-allow_tf_32=$9
-run_until_the_end=${10}
-target_setting=${11}
+workload=criteo1tb
+framework=pytorch
 
-cluster_id=${12}
-process_id=${13}
+# ## NADAW
+# submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
+# search_space=script/lawa/nadam/nadamw_prova.json
+# num_tuning_trials=1
+# study=1
+# name=nadamw_prova_01
 
-# CONDOR job arrays range from 0 to n-1, so we add +1 here
-# $((...)) is for arithmetic substitution in .sh
-trial_index=$((${process_id} + 1))
+## EMA
+submission=submissions/lawa_ema/lawa_ema_no_decay.py
+search_space=script/lawa/ema/lawa_trial_5_tune_11.json
+num_tuning_trials=12
+study=1
+name=pg_ema_no_decay_01
+
+rng_seed=${study}
+allow_tf_32=1
+run_until_the_end=1
+target_setting=0
+
+cluster_id=${SLURM_ARRAY_JOB_ID}
+process_id=${SLURM_ARRAY_TASK_ID}
+
+# SLURM job arrays range from 1 to n
+trial_index=${SLURM_ARRAY_TASK_ID}
 
 workload_list=(
   criteo1tb
@@ -109,7 +111,8 @@ if [ "$target_setting" == "1" ]; then
 fi
 
 # Execute python script
-OMP_NUM_THREADS=1 torchrun \
+# export OMP_NUM_THREADS=1 
+torchrun \
   --redirects 1:0,2:0,3:0 \
   --standalone \
   --nnodes=1 \
