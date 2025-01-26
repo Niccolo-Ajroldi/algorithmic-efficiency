@@ -6,7 +6,7 @@
     "feasible_points": [0.0]
   },
   "learning_rate": {
-    "feasible_points": [0.0005834, 0.000175, 0.0005834, 0.00525, 0.0175, 0.0525]
+    "feasible_points": [0.0005834, 0.000175, 0.0005834, 0.0175, 0.00525, 0.0175, 0.0525]
   },
   "one_minus_beta1": {
     "feasible_points": [0.06733926164]
