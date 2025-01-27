@@ -1,10 +1,10 @@
 #!/bin/bash
 
-#SBATCH --job-name=nadamw_prova_02
+#SBATCH --job-name=pg_ema_no_decay_01
 #SBATCH --array=1-9
 #SBATCH --error=/ptmp/najroldi/logs/algoperf/err/%x_%A_%a.err
 #SBATCH --output=/ptmp/najroldi/logs/algoperf/out/%x_%A_%a.out
-#SBATCH --time=20:00:00
+#SBATCH --time=10:00:00
 #SBATCH --ntasks 1
 #SBATCH --requeue
 # --- 4 GPUs on a full node ---
@@ -23,7 +23,7 @@ export DATA_DIR=/ptmp/najroldi/data
 # export HTTPS_PROXY=$https_proxy
 
 # Job specific vars
-workload=criteo1tb
+workload=librispeech_conformer
 framework=pytorch
 
 # ## NADAW
@@ -35,10 +35,10 @@ framework=pytorch
 
 ## EMA
 submission=submissions/lawa_ema/lawa_ema_no_decay.py
-search_space=script/lawa/ema/lawa_trial_5_tune_11.json
-num_tuning_trials=12
+search_space=script/lawa/ema/lawa_trial_5_tune_13.json
+num_tuning_trials=6
 study=1
-name=pg_ema_no_decay_01
+name=pg_ema_no_decay_02
 
 rng_seed=${study}
 allow_tf_32=1
@@ -111,8 +111,7 @@ if [ "$target_setting" == "1" ]; then
 fi
 
 # Execute python script
-# export OMP_NUM_THREADS=1 
-torchrun \
+OMP_NUM_THREADS=1 torchrun \
   --redirects 1:0,2:0,3:0 \
   --standalone \
   --nnodes=1 \
@@ -141,6 +140,7 @@ torchrun \
   --halve_CUDA_mem=False \
   --pytorch_eval_num_workers=$pytorch_eval_num_workers \
   --resume_last_run \
+  --overwrite \
   --max_pct_of_global_steps=$max_pct_of_global_steps \
   --cluster_id $cluster_id \
   --process_id $process_id
