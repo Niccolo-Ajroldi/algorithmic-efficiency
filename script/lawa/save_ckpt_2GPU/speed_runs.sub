@@ -1,0 +1,66 @@
+# Define variables
+LOGS_DIR=/fast/najroldi/logs/algoperf
+EXE=/home/najroldi/algorithmic-efficiency/script/lawa/save_ckpt_2GPU/run.sh
+
+workload=fastmri
+framework=pytorch
+
+## NadamW
+submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
+search_space=script/lawa/nadam/nadamw_trial_3.json
+
+num_tuning_trials=1
+study=1
+
+name=nadamw_newp_speed_01
+
+resume_experiment_name=None
+resume_last_run=False
+
+eval_every_n_steps=512
+save_checkpoints=True
+save_intermediate_checkpoints=True
+save_ckpt_freq=64
+
+rng_seed=$(study)
+allow_tf_32=True
+run_until_the_end=True
+target_setting=False
+
+num_jobs=$(num_tuning_trials)
+
+# Args
+executable = $(EXE)
+arguments = \
+  $(workload) \
+  $(framework) \
+  $(submission) \
+  $(search_space) \
+  $(num_tuning_trials) \
+  $(study) \
+  $(name) \
+  $(resume_experiment_name) \
+  $(resume_last_run) \
+  $(eval_every_n_steps) \
+  $(save_checkpoints) \
+  $(save_intermediate_checkpoints) \
+  $(save_ckpt_freq) \
+  $(rng_seed) \
+  $(allow_tf_32) \
+  $(run_until_the_end) \
+  $(target_setting) \
+  $(Cluster) \
+  $(Process)
+
+# Logs
+error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
+output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
+log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
+
+# Specs
+request_memory = 200000
+request_cpus = 8
+request_gpus = 2
+requirements = TARGET.CUDACapability >= 9.0
+
+queue $(num_jobs)
