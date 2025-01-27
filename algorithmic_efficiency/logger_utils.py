@@ -139,10 +139,10 @@ def _get_utilization() -> Dict:
   util_data['mem.used'] = memory_util.used
   util_data['mem.percent_used'] = memory_util.percent
 
-  # Disk
-  disk_io_counters = psutil.disk_io_counters()
-  util_data['mem.read_bytes_since_boot'] = disk_io_counters.read_bytes
-  util_data['mem.write_bytes_since_boot'] = disk_io_counters.write_bytes
+  # # Disk
+  # disk_io_counters = psutil.disk_io_counters()
+  # util_data['mem.read_bytes_since_boot'] = disk_io_counters.read_bytes
+  # util_data['mem.write_bytes_since_boot'] = disk_io_counters.write_bytes
 
   # Network
   net_io_counters = psutil.net_io_counters()

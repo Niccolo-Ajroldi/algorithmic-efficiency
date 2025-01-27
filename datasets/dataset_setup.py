@@ -1,5 +1,14 @@
 r"""MLCommons dataset setup script.
 
+## NICO
+srun --partition=gpu --gres=gpu:1 --time=10:00:00 --cpus-per-task=4 --mem=100000 --pty bash
+
+python datasets/dataset_setup.py --data_dir=/ptmp/najroldi/data --temp_dir=/ptmp/najroldi/tmp --ogbg --framework=pytorch
+python datasets/dataset_setup.py --data_dir=/ptmp/najroldi/data --temp_dir=/ptmp/najroldi/tmp --criteo1tb --framework=pytorch
+python datasets/dataset_setup.py --data_dir=/ptmp/najroldi/data --temp_dir=/ptmp/najroldi/tmp --librispeech --framework=pytorch
+
+
+
 If you already have a copy of a dataset(s), you can skip download it and provide
 the path when running your algorithm with submission_runner.py via --data_dir.
 
