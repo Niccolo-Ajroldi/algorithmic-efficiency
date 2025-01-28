@@ -114,10 +114,10 @@ fi
 
 # Execute python script
 OMP_NUM_THREADS=1 torchrun \
-  --redirects 1:0,2:0,3:0 \
+  --redirects 1:0 \
   --standalone \
   --nnodes=1 \
-  --nproc_per_node=4 \
+  --nproc_per_node=2 \
   $CODE_DIR/submission_runner.py \
   --workload=$workload \
   --framework=$framework \
@@ -138,7 +138,6 @@ OMP_NUM_THREADS=1 torchrun \
   --save_checkpoints=$save_checkpoints_flag \
   --save_intermediate_checkpoints=$save_intermediate_checkpoints_flag \
   --save_ckpt_freq=$save_ckpt_freq \
-  --overwrite \
   --use_wandb \
   --rng_seed=$rng_seed \
   --torch_compile=True \

@@ -8,7 +8,7 @@ export HOME=/home/najroldi
 export CODE_DIR=/home/najroldi/algorithmic-efficiency
 export EXP_DIR=/fast/najroldi/exp/algoperf
 export DATA_DIR=/fast/najroldi/data
-export TMPDIR=/fast/najroldi/tmp
+# export TMPDIR=/fast/najroldi/tmp
 
 export HTTP_PROXY=$http_proxy
 export HTTPS_PROXY=$https_proxy

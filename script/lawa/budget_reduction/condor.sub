@@ -1,35 +1,36 @@
 # Define variables
 LOGS_DIR=/fast/najroldi/logs/algoperf
-EXE=/home/najroldi/algorithmic-efficiency/script/lawa/save_ckpt_2GPU/run.sh
+EXE=/home/najroldi/algorithmic-efficiency/script/lawa/budget_reduction/run.sh
 
-workload=imagenet_vit
+workload=ogbg
 framework=pytorch
 
-# ## NadamW
-# submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
-# search_space=script/lawa/nadam/nadamw_trial_3.json
+## Nadamw reduce budget
+submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget_reduce_budget.py
+search_space=script/lawa/budget_reduction/nadam/nadamw_trial_5_pct10.json
+name=nadamw_newp_reduce_budget_10
+max_pct_of_global_steps=0.10
 
-## Nadamw no decay
-submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget_no_decay.py
-search_space=script/lawa/nadam/nadamw_trial_2.json
+# ## Nadamw less decay
+# submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget_decay_less.py
+# search_space=script/lawa/budget_reduction/nadam_decay_less/nadamw_trial_5_decay_less.json
+# name=nadamw_newp_decay_less_01
+# max_pct_of_global_steps=1.0
 
 num_tuning_trials=1
 study=1
-
-name=nadamw_newp_no_sched_01
 
 resume_experiment_name=None
 resume_last_run=False
 
 save_checkpoints=True
 save_intermediate_checkpoints=True
-save_ckpt_freq=256
-eval_every_n_steps=1024
+save_ckpt_freq=64
+eval_every_n_steps=256
 
 rng_seed=$(study)
 allow_tf_32=True
 run_until_the_end=True
-target_setting=False
 
 num_jobs=$(num_tuning_trials)
 
@@ -52,7 +53,7 @@ arguments = \
   $(rng_seed) \
   $(allow_tf_32) \
   $(run_until_the_end) \
-  $(target_setting) \
+  $(max_pct_of_global_steps) \
   $(Cluster) \
   $(Process)
 

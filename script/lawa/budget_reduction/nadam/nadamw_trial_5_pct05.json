@@ -20,10 +20,7 @@
   "warmup_factor": {
     "feasible_points": [0.02]
   },
-  "cool_mode": {
-    "feasible_points": [true]
-  },
-  "cool_steps": {
-    "feasible_points": [150]
+  "pct_budget_reduction": {
+    "feasible_points": [0.05]
   }
 }

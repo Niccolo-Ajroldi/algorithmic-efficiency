@@ -2,32 +2,28 @@
 LOGS_DIR=/fast/najroldi/logs/algoperf
 EXE=/home/najroldi/algorithmic-efficiency/script/lawa/resume/run.sh
 
-workload=imagenet_vit
+workload=ogbg
 framework=pytorch
 
 ## NadamW
-submission=submissions/nadamw_mod/nadamw_mod.py
-search_space=script/lawa/resume/cool/trial_2_cool_1000.json
-
-# ## LAWA
-# submission=submissions/lawa_queue/lawa_queue.py
-# search_space=script/lawa/resume/lawa/trial_2_h1000_05.json
+submission=submissions/nadamw_mod/nadamw_mod_from_orig.py
+search_space=script/lawa/resume/cool/trial_5_cool_8000.json
 
 num_tuning_trials=1
 study=1
 
-checkpoint=100000
-name=nadamw_resume_$(checkpoint)
-# name=lawa_h1000_05
-# name=nadamw_save_ckpt_01
+checkpoint=11968
+name=nadamw_resume_$(checkpoint)_01
 
-# resume_experiment_name=None
-resume_experiment_name=nadamw_save_ckpt_01_study_1/$(workload)_pytorch/trial_1/checkpoint_$(checkpoint)
+baseline_name=nadamw_newp_speed_01
+resume_experiment_name=$(baseline_name)_study_$(study)/$(workload)_$(framework)/trial_1/checkpoint_$(checkpoint)
 resume_last_run=True
-eval_every_n_steps=1000
+
+save_ckpt_freq=64
+eval_every_n_steps=256
+
 save_checkpoints=False
 save_intermediate_checkpoints=False
-save_ckpt_freq=1000
 
 rng_seed=$(study)
 allow_tf_32=True
@@ -62,13 +58,10 @@ output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
 log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 
 # Specs
-request_memory = 500000
-request_cpus = 36
-request_gpus = 4
-requirements = (TARGET.CUDACapability >= 8.0)
-# requirements = (TARGET.CUDACapability >= 8.0) && (TARGET.Machine != "g100.internal.cluster.is.localnet") && (TARGET.Machine != "g143.internal.cluster.is.localnet")
-# requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-40GB")
-# requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB")
-# requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB") && (TARGET.Machine != "g102.internal.cluster.is.localnet")
+request_memory = 250000
+request_cpus = 8
+request_gpus = 2
+requirements = TARGET.CUDACapability >= 9.0
+# requirements = TARGET.CUDACapability >= 8.0 && (TARGET.Machine != "g125.internal.cluster.is.localnet") && (TARGET.Machine != "g147.internal.cluster.is.localnet")
 
 queue $(num_jobs)

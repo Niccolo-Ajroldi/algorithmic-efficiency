@@ -20,10 +20,7 @@
   "warmup_factor": {
     "feasible_points": [0.02]
   },
-  "cool_mode": {
-    "feasible_points": [true]
-  },
-  "cool_steps": {
-    "feasible_points": [800]
+  "lr_end_pct": {
+    "feasible_points": [0.01, 0.1, 0.5]
   }
 }

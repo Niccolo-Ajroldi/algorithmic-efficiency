@@ -2,25 +2,25 @@
 LOGS_DIR=/fast/najroldi/logs/algoperf
 EXE=/home/najroldi/algorithmic-efficiency/script/lawa/eval_ckpt/GPUx2/run.sh
 
-workload=librispeech_conformer
+workload=imagenet_vit
 framework=pytorch
 
 ## LAWA Offline
 submission=submissions/lawa_queue/lawa_queue_offline.py
-search_space=script/lawa/eval_trials/lawa_trial_5_01.json
-name=lawa_newp_speed_01
+search_space=script/lawa/queue/lawa_trial_2_tune_03.json
+name=lawa_newp_speed_03
 
 # ## EMA Offline
 # submission=submissions/lawa_ema/lawa_ema_offline.py
-# search_space=script/lawa/eval_trials/ema_trial_5_01.json
-# name=ema_newp_speed_01
+# search_space=script/lawa/ema/lawa_trial_2_tune_04.json
+# name=ema_newp_speed_03
 
-num_tuning_trials=15
-study=3
+num_tuning_trials=9
+study=1
 
 baseline_name=nadamw_newp_speed_01
 baseline_ckpt_dir=/fast/najroldi/exp/algoperf/$(baseline_name)_study_$(study)/$(workload)_$(framework)/trial_1
-eval_every_n_steps=256
+eval_every_n_steps=1024
 
 rng_seed=$(study)
 allow_tf_32=True
@@ -54,10 +54,11 @@ output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
 log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 
 # Specs
-request_memory = 200000
+request_memory = 250000
 request_cpus = 8
 request_gpus = 2
-requirements = TARGET.CUDACapability >= 8.0
-# requirements = TARGET.CUDACapability >= 8.0 && (TARGET.Machine != "g147.internal.cluster.is.localnet")
+requirements = TARGET.CUDACapability >= 9.0
+# requirements = TARGET.CUDACapability >= 8.0
+# requirements = TARGET.CUDACapability == 8.0 && (TARGET.Machine != "g125.internal.cluster.is.localnet") && (TARGET.Machine != "g147.internal.cluster.is.localnet")
 
 queue $(num_jobs)
