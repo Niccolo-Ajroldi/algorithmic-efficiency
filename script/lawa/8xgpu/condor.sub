@@ -27,12 +27,23 @@ framework=pytorch
 # run_until_the_end=1
 # num_jobs=$(num_tuning_trials)
 
-## SHAMPOO
-submission=submissions/AlgoPerf_Team_21/external_tuning/shampoo_submission/submission.py
-search_space=script/lawa/shampoo/trial_4.json
+# ## SHAMPOO
+# submission=submissions/AlgoPerf_Team_21/external_tuning/shampoo_submission/submission.py
+# search_space=script/lawa/shampoo/trial_4.json
+# num_tuning_trials=1
+# study=3
+# name=shampoo_01
+# rng_seed=$(study)
+# allow_tf_32=0
+# run_until_the_end=0
+# num_jobs=$(num_tuning_trials)
+
+## SHAMPOO + LAWA
+submission=submissions/AlgoPerf_Team_21/external_tuning/shampoo_submission/submission_LAWA.py
+search_space=script/lawa/shampoo/trial_4_lawa.json
 num_tuning_trials=1
 study=3
-name=shampoo_01
+name=shampoo_lawa_01
 rng_seed=$(study)
 allow_tf_32=0
 run_until_the_end=0

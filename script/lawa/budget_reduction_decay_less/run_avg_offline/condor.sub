@@ -1,34 +1,32 @@
 # Define variables
 LOGS_DIR=/fast/najroldi/logs/algoperf
-EXE=/home/najroldi/algorithmic-efficiency/script/lawa/eval_ckpt/GPUx2/run.sh
+EXE=/home/najroldi/algorithmic-efficiency/script/lawa/budget_reduction_decay_less/run_avg_offline/run.sh
 
-workload=criteo1tb
+workload=librispeech_conformer
 framework=pytorch
 
-## LAWA Offline
-submission=submissions/lawa_queue/lawa_queue_offline.py
-search_space=script/lawa/eval_trials/lawa_trial_5_deepspeech_01.json
-# name=lawa_newp_speed_03
-name=lawa_newp_no_sched_02
+# ## LAWA Offline
+# submission=submissions/lawa_queue/lawa_queue_offline.py
+# search_space=script/lawa/budget_reduction_decay_less/search_space/lawa_decay_less/trial_5_decay05.json
+# name=lawa_newp_decay_less_05
 
-# ## EMA Offline
-# submission=submissions/lawa_ema/lawa_ema_offline.py
-# search_space=script/lawa/eval_trials/ema_trial_5_05.json
-# # name=ema_newp_speed_03
-# name=ema_newp_no_sched_01
+## EMA Offline
+submission=submissions/lawa_ema/lawa_ema_offline.py
+search_space=script/lawa/budget_reduction_decay_less/search_space/ema_decay_less/trial_5_decay01.json
+name=ema_newp_decay_less_01
 
-num_tuning_trials=8
+num_tuning_trials=4
 study=1
 
-# baseline_name=nadamw_newp_speed_01
-baseline_name=nadamw_newp_no_sched_01
-baseline_ckpt_dir=/fast/najroldi/exp/algoperf/$(baseline_name)_study_$(study)/$(workload)_$(framework)/trial_1
-eval_every_n_steps=128
+baseline_name=nadamw_newp_decay_less_01
+baseline_ckpt_dir=/fast/najroldi/exp/algoperf/$(baseline_name)_study_$(study)/$(workload)_$(framework)/trial_2
+eval_every_n_steps=256
+
+max_pct_of_global_steps=1.0
 
 rng_seed=$(study)
 allow_tf_32=True
 run_until_the_end=True
-target_setting=False
 
 num_jobs=$(num_tuning_trials)
 
@@ -47,7 +45,7 @@ arguments = \
   $(rng_seed) \
   $(allow_tf_32) \
   $(run_until_the_end) \
-  $(target_setting) \
+  $(max_pct_of_global_steps) \
   $(Cluster) \
   $(Process)
 

@@ -227,6 +227,11 @@ flags.DEFINE_integer(
     'save_ckpt_freq',
     None,
     'Save checkpoint every n steps.')  # (nico)
+flags.DEFINE_string(
+    'baseline_ckpt_dir',
+    None,
+    'baseline_ckpt_dir')  # (nico)
+
 FLAGS = flags.FLAGS
 USE_PYTORCH_DDP, RANK, DEVICE, N_GPUS = pytorch_setup()
 

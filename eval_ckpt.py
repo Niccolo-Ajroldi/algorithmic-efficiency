@@ -479,6 +479,13 @@ def train_once(
                                                     data_dir,
                                                     imagenet_v2_data_dir,
                                                     global_step)
+
+          if RANK==0 and not train_state['validation_goal_reached'] \
+              and workload.has_reached_validation_target(latest_eval_result):
+                # This is the first time we reach validation target! We log this step
+                wandb.run.summary["reached_valid_target"] = True
+                wandb.run.summary["step_to_target"] = global_step
+
           # Check if targets reached.
           train_state['validation_goal_reached'] = (
               workload.has_reached_validation_target(latest_eval_result) or
