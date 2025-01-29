@@ -1,25 +1,29 @@
 # Define variables
 LOGS_DIR=/fast/najroldi/logs/algoperf
-EXE=/home/najroldi/algorithmic-efficiency/script/lawa/eval_ckpt/GPUx2/run.sh
+EXE=/home/najroldi/algorithmic-efficiency/script/lawa/save_ckpt_2GPU/run.sh
 
 workload=imagenet_vit
 framework=pytorch
 
-## LAWA Offline
-submission=submissions/lawa_queue/lawa_queue_offline.py
-search_space=script/lawa/queue/lawa_trial_2_tune_03.json
-name=lawa_newp_speed_03
+# ## NadamW
+# submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
+# search_space=script/lawa/nadam/nadamw_trial_3.json
 
-# ## EMA Offline
-# submission=submissions/lawa_ema/lawa_ema_offline.py
-# search_space=script/lawa/ema/lawa_trial_2_tune_04.json
-# name=ema_newp_speed_03
+## Nadamw no decay
+submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget_no_decay.py
+search_space=script/lawa/nadam/nadamw_trial_2.json
 
-num_tuning_trials=9
+num_tuning_trials=1
 study=1
 
-baseline_name=nadamw_newp_speed_01
-baseline_ckpt_dir=/fast/najroldi/exp/algoperf/$(baseline_name)_study_$(study)/$(workload)_$(framework)/trial_1
+name=nadamw_newp_no_sched_01
+
+resume_experiment_name=None
+resume_last_run=False
+
+save_checkpoints=True
+save_intermediate_checkpoints=True
+save_ckpt_freq=256
 eval_every_n_steps=1024
 
 rng_seed=$(study)
@@ -39,8 +43,12 @@ arguments = \
   $(num_tuning_trials) \
   $(study) \
   $(name) \
-  $(baseline_ckpt_dir) \
+  $(resume_experiment_name) \
+  $(resume_last_run) \
   $(eval_every_n_steps) \
+  $(save_checkpoints) \
+  $(save_intermediate_checkpoints) \
+  $(save_ckpt_freq) \
   $(rng_seed) \
   $(allow_tf_32) \
   $(run_until_the_end) \
@@ -58,7 +66,5 @@ request_memory = 250000
 request_cpus = 8
 request_gpus = 2
 requirements = TARGET.CUDACapability >= 9.0
-# requirements = TARGET.CUDACapability >= 8.0
-# requirements = TARGET.CUDACapability == 8.0 && (TARGET.Machine != "g125.internal.cluster.is.localnet") && (TARGET.Machine != "g147.internal.cluster.is.localnet")
 
 queue $(num_jobs)

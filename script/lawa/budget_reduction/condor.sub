@@ -1,33 +1,37 @@
 # Define variables
 LOGS_DIR=/fast/najroldi/logs/algoperf
-EXE=/home/najroldi/algorithmic-efficiency/script/lawa/resume/run.sh
+EXE=/home/najroldi/algorithmic-efficiency/script/lawa/budget_reduction/run.sh
 
 workload=ogbg
 framework=pytorch
 
-## NadamW
-submission=submissions/nadamw_mod/nadamw_mod_from_orig.py
-search_space=script/lawa/resume/cool/trial_5_cool_8000.json
+## Nadamw reduce budget
+submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget_reduce_budget.py
+search_space=script/lawa/budget_reduction/nadam/nadamw_trial_5_pct10.json
+name=nadamw_newp_reduce_budget_10
+max_pct_of_global_steps=0.10
+
+# ## Nadamw less decay
+# submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget_decay_less.py
+# search_space=script/lawa/budget_reduction/nadam_decay_less/nadamw_trial_5_decay_less.json
+# name=nadamw_newp_decay_less_01
+# max_pct_of_global_steps=1.0
 
 num_tuning_trials=1
 study=1
 
-checkpoint=11968
-name=nadamw_resume_$(checkpoint)_01
+resume_experiment_name=None
+resume_last_run=False
 
-baseline_name=nadamw_newp_speed_01
-resume_experiment_name=$(baseline_name)_study_$(study)/$(workload)_$(framework)/trial_1/checkpoint_$(checkpoint)
-resume_last_run=True
-
+save_checkpoints=True
+save_intermediate_checkpoints=True
 save_ckpt_freq=64
 eval_every_n_steps=256
-
-save_checkpoints=False
-save_intermediate_checkpoints=False
 
 rng_seed=$(study)
 allow_tf_32=True
 run_until_the_end=True
+
 num_jobs=$(num_tuning_trials)
 
 # Args
@@ -49,6 +53,7 @@ arguments = \
   $(rng_seed) \
   $(allow_tf_32) \
   $(run_until_the_end) \
+  $(max_pct_of_global_steps) \
   $(Cluster) \
   $(Process)
 
@@ -62,6 +67,5 @@ request_memory = 250000
 request_cpus = 8
 request_gpus = 2
 requirements = TARGET.CUDACapability >= 9.0
-# requirements = TARGET.CUDACapability >= 8.0 && (TARGET.Machine != "g125.internal.cluster.is.localnet") && (TARGET.Machine != "g147.internal.cluster.is.localnet")
 
 queue $(num_jobs)

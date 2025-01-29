@@ -13,6 +13,11 @@ export DATA_DIR=/fast/najroldi/data
 export HTTP_PROXY=$http_proxy
 export HTTPS_PROXY=$https_proxy
 
+# # Will this allow to set pytorch_eval_num_workers=0? -> yes
+# # will it allow to have correct evals on workers>1 ??
+# export OMP_NUM_THREADS=1 
+# export MKL_NUM_THREADS=1
+
 # Job specific vars
 workload=${1}
 framework=${2}
@@ -22,16 +27,20 @@ num_tuning_trials=${5}
 study=${6}
 
 name=${7}
-baseline_ckpt_dir=${8}
-eval_every_n_steps=${9}
+resume_experiment_name=${8}
+resume_last_run=${9}
+eval_every_n_steps=${10}
+save_checkpoints=${11}
+save_intermediate_checkpoints=${12}
+save_ckpt_freq=${13}
 
-rng_seed=${10}
-allow_tf_32=${11}
-run_until_the_end=${12}
-target_setting=${13}
+rng_seed=${14}
+allow_tf_32=${15}
+run_until_the_end=${16}
+target_setting=${17}
 
-cluster_id=${14}
-process_id=${15}
+cluster_id=${18}
+process_id=${19}
 
 # CONDOR job arrays range from 0 to n-1, so we add +1 here
 # $((...)) is for arithmetic substitution in .sh
@@ -90,6 +99,24 @@ if [ "$run_until_the_end" == "True" ]; then
   run_until_the_end_flag=True
 fi
 
+# resume_last_run
+resume_last_run_flag=False
+if [ "$resume_last_run" == "True" ]; then
+  resume_last_run_flag=True
+fi
+
+# save_checkpoints
+save_checkpoints_flag=False
+if [ "$save_checkpoints" == "True" ]; then
+  save_checkpoints_flag=True
+fi
+
+# save_intermediate_checkpoints
+save_intermediate_checkpoints_flag=False
+if [ "$save_intermediate_checkpoints" == "True" ]; then
+  save_intermediate_checkpoints_flag=True
+fi
+
 # max_pct_of_global_steps
 max_pct_of_global_steps=1.0
 if [ "$target_setting" == "True" ]; then
@@ -102,7 +129,7 @@ OMP_NUM_THREADS=1 torchrun \
   --standalone \
   --nnodes=1 \
   --nproc_per_node=2 \
-  $CODE_DIR/eval_ckpt.py \
+  $CODE_DIR/submission_runner.py \
   --workload=$workload \
   --framework=$framework \
   --tuning_ruleset=external \
@@ -116,11 +143,12 @@ OMP_NUM_THREADS=1 torchrun \
   --trial_index=$trial_index \
   --experiment_dir=$EXP_DIR  \
   --experiment_name=$experiment_name \
-  --resume_last_run=True \
+  --resume_experiment_name=$resume_experiment_name \
+  --resume_last_run=$resume_last_run_flag \
   --eval_every_n_steps=$eval_every_n_steps \
-  --save_checkpoints=False \
-  --save_intermediate_checkpoints=False \
-  --baseline_ckpt_dir=$baseline_ckpt_dir \
+  --save_checkpoints=$save_checkpoints_flag \
+  --save_intermediate_checkpoints=$save_intermediate_checkpoints_flag \
+  --save_ckpt_freq=$save_ckpt_freq \
   --overwrite \
   --use_wandb \
   --rng_seed=$rng_seed \
@@ -129,7 +157,7 @@ OMP_NUM_THREADS=1 torchrun \
   --run_until_the_end=$run_until_the_end_flag \
   --halve_CUDA_mem=False \
   --pytorch_eval_num_workers=$pytorch_eval_num_workers \
-  --log_lr=False \
+  --log_lr=True \
   --max_pct_of_global_steps=$max_pct_of_global_steps \
   --cluster_id $cluster_id \
   --process_id $process_id

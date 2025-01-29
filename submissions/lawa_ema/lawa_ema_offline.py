@@ -135,8 +135,9 @@ def prepare_for_eval(workload: spec.Workload,
   # logging.info(f"EMA --- Loading avg into model")
 
   # Load ema into model
-  for p, p_avg in zip(current_model.parameters(), lawa.ema):
-      p.data.copy_(p_avg.data)  # move avg to GPU
+  if lawa.ema is not None:
+    for p, p_avg in zip(current_model.parameters(), lawa.ema):
+        p.data.copy_(p_avg.data)  # move avg to GPU
 
   return (optimizer_state, current_model, model_state)
 

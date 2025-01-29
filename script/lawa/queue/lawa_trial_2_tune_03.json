@@ -20,10 +20,13 @@
   "warmup_factor": {
     "feasible_points": [0.05]
   },
-  "cool_mode": {
-    "feasible_points": [true]
+  "lawa_burnin_pct": {
+    "feasible_points": [0.0]
   },
-  "cool_steps": {
-    "feasible_points": [1000]
+  "lawa_every_steps": {
+    "feasible_points": [256, 1024, 2048]
+  },
+  "lawa_queue_len": {
+    "feasible_points": [2, 5, 10]
   }
 }

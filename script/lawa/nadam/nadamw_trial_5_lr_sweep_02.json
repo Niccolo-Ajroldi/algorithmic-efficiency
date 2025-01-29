@@ -6,7 +6,7 @@
     "feasible_points": [0.0]
   },
   "learning_rate": {
-    "feasible_points": [0.00175]
+    "feasible_points": [0.0000175, 0.175]
   },
   "one_minus_beta1": {
     "feasible_points": [0.06733926164]
@@ -19,11 +19,5 @@
   },
   "warmup_factor": {
     "feasible_points": [0.02]
-  },
-  "cool_mode": {
-    "feasible_points": [true]
-  },
-  "cool_steps": {
-    "feasible_points": [800]
   }
 }

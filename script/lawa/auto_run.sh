@@ -121,6 +121,7 @@ OMP_NUM_THREADS=1 torchrun \
   --use_wandb \
   --rng_seed=$rng_seed \
   --torch_compile=True \
+  --overwrite \
   --allow_tf32=$allow_tf_32_flag \
   --run_until_the_end=$run_until_the_end_flag \
   --halve_CUDA_mem=False \
