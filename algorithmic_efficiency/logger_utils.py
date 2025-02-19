@@ -283,6 +283,7 @@ def get_meta_data(workload: spec.Workload,
 
 
 def check_existing_wandb_run(project_name, configs, hyperparameters):
+    return False
     api = wandb.Api()
     runs = api.runs(f"ajnico/{project_name}")
     

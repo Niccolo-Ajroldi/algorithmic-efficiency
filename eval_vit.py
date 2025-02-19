@@ -1,4 +1,6 @@
-r"""Run a submission on a single workload.
+r"""
+Eval from a checkpoint folder, using LAWA, EMA or Polyak.
+
 
 Example command:
 
@@ -13,6 +15,7 @@ python3 submission_runner.py \
     --experiment_dir=/home/znado/experiment_dir \
     --experiment_name=baseline
 """
+
 
 import datetime
 import gc
@@ -33,6 +36,8 @@ from absl import logging
 import jax
 import torch
 import torch.distributed as dist
+
+from flax.training.checkpoints import latest_checkpoint
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Disables tensorRT, cuda warnings.
 import tensorflow as tf
@@ -57,6 +62,7 @@ from algorithmic_efficiency import fixed_space
 # disable only for deepspeech if it works fine for other workloads.
 os.environ['XLA_FLAGS'] = '--xla_gpu_enable_triton_gemm=false'
 
+
 # TODO(znado): make a nicer registry of workloads that lookup in.
 BASE_WORKLOADS_DIR = workloads.BASE_WORKLOADS_DIR
 
@@ -73,6 +79,8 @@ flags.DEFINE_string(
     None,
     help=f'The name of the workload to run.\n Choices: {list(WORKLOADS.keys())}'
 )
+
+
 flags.DEFINE_enum(
     'tuning_ruleset',
     'external',
@@ -121,6 +129,7 @@ flags.DEFINE_string(
     'It is required and the directory should have '
     'an absolute path rather than a relative path.')
 flags.DEFINE_string('experiment_name', None, 'Name of the experiment.')
+
 flags.DEFINE_boolean(
     'save_checkpoints',
     True,
@@ -227,14 +236,21 @@ flags.DEFINE_integer(
     'save_ckpt_freq',
     None,
     'Save checkpoint every n steps.')  # (nico)
+
 flags.DEFINE_string(
     'baseline_ckpt_dir',
     None,
-    'baseline_ckpt_dir')  # (nico)
+    'baseline_ckpt_dir')
+
+flags.DEFINE_string(
+    'run_id_resume',
+    None,
+    'run_id_resume')
+
+
 
 FLAGS = flags.FLAGS
 USE_PYTORCH_DDP, RANK, DEVICE, N_GPUS = pytorch_setup()
-
 
 def _get_time():
   if torch.cuda.is_available():
@@ -253,13 +269,13 @@ if USE_PYTORCH_DDP:
 else:
   get_time = _get_time
 
-
 def _reset_cuda_mem():
   if FLAGS.framework == 'pytorch' and torch.cuda.is_available():
     torch._C._cuda_clearCublasWorkspaces()
     gc.collect()
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
+
 
 
 def train_once(
@@ -280,24 +296,15 @@ def train_once(
     max_global_steps: int = None,
     max_pct_of_global_steps: float = None,  # (nico)
     log_dir: Optional[str] = None,
-    resume_dir: Optional[str] = None,  # (nico)
+    baseline_ckpt_dir: Optional[str] = None,  # (nico)
     save_checkpoints: Optional[bool] = True
 ) -> Tuple[spec.Timing, Dict[str, Any]]:
   _reset_cuda_mem()
-  data_rng, opt_init_rng, model_init_rng, rng = prng.split(rng, 4)
+  _, opt_init_rng, model_init_rng, rng = prng.split(rng, 4)
 
   # Workload setup.
-  logging.info('Initializing dataset.')
   if hasattr(workload, '_eval_num_workers'):
-    # Set the number of workers for PyTorch evaluation data loaders
-    # (not all workloads have them).
     workload.eval_num_workers = FLAGS.pytorch_eval_num_workers
-  with profiler.profile('Initializing dataset'):
-    input_queue = workload._build_input_queue(
-        data_rng,
-        'train',
-        data_dir=data_dir,
-        global_batch_size=global_batch_size)
   logging.info('Initializing model.')
   with profiler.profile('Initializing model'):
     dropout_rate = None
@@ -360,15 +367,10 @@ def train_once(
       'last_eval_time': 0,
       'training_complete': False,
       'accumulated_submission_time': 0,
-      'prepare_for_eval_time': 0,  # (nico)
       'accumulated_eval_time': 0,
       'accumulated_logging_time': 0,
       'last_step_end_time': None,
   }
-  
-  last_update_time = None  # (nico)
-  last_prep_time = None  # (nico)
-  
   global_step = 0
   eval_results = []
   preemption_count = 0
@@ -376,23 +378,7 @@ def train_once(
   # Loggers and checkpoint setup.
   logging.info('Initializing checkpoint and logger.')
   if log_dir is not None:
-    (optimizer_state,
-     model_params,
-     model_state,
-     train_state,
-     eval_results,
-     global_step,
-     preemption_count) = checkpoint_utils.maybe_restore_checkpoint(
-         FLAGS.framework,
-         optimizer_state,
-         model_params,
-         model_state,
-         train_state,
-         eval_results,
-         global_step,
-         preemption_count,
-         checkpoint_dir=resume_dir  # (nico): resume_dir instead of log_dir here!
-    )
+    # (nico): skipping checkpoint restoring
     meta_file_name = os.path.join(log_dir, f'meta_data_{preemption_count}.json')
     logging.info(f'Saving meta data to {meta_file_name}.')
     meta_data = logger_utils.get_meta_data(workload, rng_seed)
@@ -407,252 +393,117 @@ def train_once(
                                                    hyperparameters)
       workload.attach_metrics_logger(metrics_logger)
 
-  global_start_time = get_time()
-  train_state['last_step_end_time'] = global_start_time
+  # What's the last ckpt?)
+  last_ckpt_path = latest_checkpoint(baseline_ckpt_dir)
+  last_ckpt_step = int(os.path.basename(last_ckpt_path).split('_')[-1])
 
   logging.info('Starting training loop.')
-  goals_reached = (
-      train_state['validation_goal_reached'] and
-      train_state['test_goal_reached'])
-  # while train_state['is_time_remaining'] and \
-  #     not goals_reached and \
-  #     not train_state['training_complete'] and \
-  #     global_step <= workload.step_hint:  # (nico): running on faster Hardware, need this!
+  goals_reached = train_state['validation_goal_reached']
 
   while global_step <= workload.step_hint and \
       not train_state['training_complete'] and \
-      (FLAGS.run_until_the_end or (train_state['is_time_remaining'] and not goals_reached)):
+      (FLAGS.run_until_the_end or not goals_reached):
 
     step_rng = prng.fold_in(rng, global_step)
-    data_select_rng, update_rng, prep_eval_rng, eval_rng = \
-      prng.split(step_rng, 4)
+    _, update_rng, prep_eval_rng, eval_rng = prng.split(step_rng, 4)
 
-    # (nico): log learning rate, NOTE: it accumulates to submission_time
-    if FLAGS.log_lr and RANK==0 and wandb is not None and FLAGS.use_wandb:
-      # log every 200 steps or every save_ckpt_freq
-      if (FLAGS.save_ckpt_freq is None and global_step % 200) or \
-          (FLAGS.save_ckpt_freq is None or global_step % FLAGS.save_ckpt_freq == 0):
-        wandb.log({
-          "global_step": global_step,
-          "lr": optimizer_state['optimizer'].param_groups[0].get("lr", float("NaN"))
-        })
+    # Assume that an update step has been done, load the ckpt into the model
+    # so that model_params contains the latest params
 
-    with profiler.profile('Data selection'):
-      batch = data_selection(workload,
-                             input_queue,
-                             optimizer_state,
-                             model_params,
-                             model_state,
-                             hyperparameters,
-                             global_step,
-                             data_select_rng)
-    try:
-      with profiler.profile('Update parameters'):
-        optimizer_state, model_params, model_state = update_params(
-            workload=workload,
-            current_param_container=model_params,
-            current_params_types=workload.model_params_types,
-            model_state=model_state,
-            hyperparameters=hyperparameters,
-            batch=batch,
-            loss_type=workload.loss_type,
-            optimizer_state=optimizer_state,
-            eval_results=eval_results,
-            global_step=global_step,
-            rng=update_rng,
-            **({'train_state': MappingProxyType(train_state)}
-               if needs_train_state else {}))
-    except spec.TrainingCompleteError:
-      train_state['training_complete'] = True
     global_step += 1
-    if (max_global_steps is not None) and (global_step == max_global_steps):
-      train_state['training_complete'] = True
+    
+    # append step to checkpoint base path
+    ckpt_path_global_step = os.path.join(baseline_ckpt_dir, f"checkpoint_{global_step}")
+
     # (nico): train for a fixed pct of step_hint
     if (max_pct_of_global_steps is not None) and \
         (max_pct_of_global_steps < 1.0) and \
         (global_step / workload.step_hint >= max_pct_of_global_steps):
       train_state['training_complete'] = True
+    # (nico): eval again if we reached the last saved checkpoint
+    if global_step == last_ckpt_step:
+      train_state['training_complete'] = True
 
-    train_step_end_time = get_time()
+    # Check if submission is eligible for an untimed eval.  (nico): eval every n steps
+    if (global_step % FLAGS.eval_every_n_steps == 0 or train_state['training_complete']):
 
-    train_state['accumulated_submission_time'] += (
-        train_step_end_time - train_state['last_step_end_time'])
-    last_update_time = (train_step_end_time - train_state['last_step_end_time'])
+      if os.path.isfile(ckpt_path_global_step):
 
-    # (nico): use a custom evaluation time in seconds if provided
-    eval_period_time_sec = workload.eval_period_time_sec
-    if FLAGS.custom_eval_period_time_sec is not None:
-      eval_period_time_sec = FLAGS.custom_eval_period_time_sec
+        # Load only model params from checkpoint
+        checkpoint_state = torch.load(ckpt_path_global_step, map_location=DEVICE)
+        if isinstance(
+          model_params,
+          (torch.nn.DataParallel, torch.nn.parallel.DistributedDataParallel)):
+          model_params = model_params.module
+        model_params.load_state_dict(checkpoint_state['model_params'])
+        checkpoint_state['model_params'] = model_params
+        # logging.info(f'Loaded checkpoint from {ckpt_path_global_step}.')
       
-    # Check if submission is eligible for an untimed eval.
-    is_eval_time = False
-    if FLAGS.eval_every_n_steps is None:  # original logic
-      is_eval_time = ((train_step_end_time - train_state['last_eval_time']) >=
-      eval_period_time_sec or train_state['training_complete'])
-    else:  # (nico): eval every n steps
-      is_eval_time = (global_step % FLAGS.eval_every_n_steps == 0 or
-                      train_state['training_complete'])
-    if is_eval_time:
+      else:
+        raise ValueError(f"not a file: {ckpt_path_global_step}")
 
-      # Prepare for evaluation (timed).
-      if prepare_for_eval is not None:
+      # # Prepare for eval
+      # if prepare_for_eval is not None:
 
-        with profiler.profile('Prepare for eval'):
-          del batch
-          prepare_for_eval_start_time = get_time()
-          optimizer_state, model_params, model_state = prepare_for_eval(
-              workload=workload,
-              current_param_container=model_params,
-              current_params_types=workload.model_params_types,
-              model_state=model_state,
-              hyperparameters=hyperparameters,
-              loss_type=workload.loss_type,
-              optimizer_state=optimizer_state,
-              eval_results=eval_results,
-              global_step=global_step,
-              rng=prep_eval_rng)
-          prepare_for_eval_end_time = get_time()
+      #   with profiler.profile('Prepare for eval'):
+      #     optimizer_state, model_params, model_state = prepare_for_eval(
+      #         workload=workload,
+      #         current_param_container=model_params,
+      #         current_params_types=workload.model_params_types,
+      #         model_state=model_state,
+      #         hyperparameters=hyperparameters,
+      #         loss_type=workload.loss_type,
+      #         optimizer_state=optimizer_state,
+      #         eval_results=eval_results,
+      #         global_step=global_step,
+      #         rng=prep_eval_rng)
 
-        # Update sumbission time.
-        train_state['prepare_for_eval_time'] += (
-            prepare_for_eval_end_time - prepare_for_eval_start_time)
-        last_prep_time = (prepare_for_eval_end_time - prepare_for_eval_start_time)
-        train_state['accumulated_submission_time'] += (
-            prepare_for_eval_end_time - prepare_for_eval_start_time)
+      # Eval
+      with profiler.profile('Evaluation'):
+        _reset_cuda_mem()
 
-      # Check if time is remaining,
-      # use 3x the runtime budget for the self-tuning ruleset.
-      max_allowed_runtime_sec = (
-          workload.max_allowed_runtime_sec if FLAGS.tuning_ruleset == 'external'
-          else 3 * workload.max_allowed_runtime_sec)
-      train_state['is_time_remaining'] = (
-          train_state['accumulated_submission_time'] < max_allowed_runtime_sec)
+        try:
+          latest_eval_result = workload.eval_model(global_eval_batch_size,
+                                                    model_params,
+                                                    model_state,
+                                                    eval_rng,
+                                                    data_dir,
+                                                    imagenet_v2_data_dir,
+                                                    global_step)
 
-      # Eval if time is remaining (untimed).
-      if train_state['is_time_remaining']:
+          if RANK==0 and not train_state['validation_goal_reached'] \
+              and workload.has_reached_validation_target(latest_eval_result):
+                # This is the first time we reach validation target! We log this step
+                wandb.run.summary["reached_valid_target"] = True
+                wandb.run.summary["step_to_target"] = global_step
 
-        with profiler.profile('Evaluation'):
+          # Check if targets reached.
+          train_state['validation_goal_reached'] = (
+              workload.has_reached_validation_target(latest_eval_result) or
+              train_state['validation_goal_reached'])
+          train_state['test_goal_reached'] = False  # (nico): skip test eval
+          goals_reached = train_state['validation_goal_reached']
+
+          logging.info(f'\tStep: {global_step}, \t{latest_eval_result}')
+          eval_results.append((global_step, latest_eval_result))
+
+          if log_dir is not None and RANK == 0:
+            metrics_logger.append_scalar_metrics(
+                latest_eval_result,
+                global_step=global_step,
+                preemption_count=preemption_count,
+                is_eval=True,
+            )
+
           _reset_cuda_mem()
 
-          try:
-            eval_start_time = get_time()
-            latest_eval_result = workload.eval_model(global_eval_batch_size,
-                                                     model_params,
-                                                     model_state,
-                                                     eval_rng,
-                                                     data_dir,
-                                                     imagenet_v2_data_dir,
-                                                     global_step)
-            
-            if RANK==0 and not train_state['validation_goal_reached'] \
-                and workload.has_reached_validation_target(latest_eval_result):
-                  # This is the first time we reach validation target! We log this step
-                  wandb.run.summary["reached_valid_target"] = True
-                  wandb.run.summary["step_to_target"] = global_step
-            
-            # Check if targets reached.
-            # Note that this is one of the stopping conditions for the length of
-            # a training run. To score the run we only consider the time
-            # to validation target retrospectively.  
-            train_state['validation_goal_reached'] = (
-                workload.has_reached_validation_target(latest_eval_result) or
-                train_state['validation_goal_reached'])
-            # (nico): skip test eval
-            train_state['test_goal_reached'] = False
-            # train_state['test_goal_reached'] = (
-            #     workload.has_reached_test_target(latest_eval_result) or
-            #     train_state['test_goal_reached'])
-            # (nico): stop at valid target reached
-            # goals_reached = (
-            #     train_state['validation_goal_reached'] and
-            #     train_state['test_goal_reached'])
-            goals_reached = train_state['validation_goal_reached']
-            
-            # Save last eval time.
-            eval_end_time = get_time()
-            train_state['last_eval_time'] = eval_end_time
-
-            # Accumulate eval time.
-            train_state[
-                'accumulated_eval_time'] += eval_end_time - eval_start_time
-
-            # Add times to eval results for logging.
-            latest_eval_result['score'] = (
-                train_state['accumulated_submission_time'])
-            latest_eval_result[
-                'total_duration'] = eval_end_time - global_start_time
-            latest_eval_result['accumulated_submission_time'] = train_state[
-                'accumulated_submission_time']
-            latest_eval_result['accumulated_eval_time'] = train_state[
-                'accumulated_eval_time']
-            latest_eval_result['accumulated_logging_time'] = train_state[
-                'accumulated_logging_time']
-            time_since_start = latest_eval_result['total_duration']
-            logging.info(f'Time since start: {time_since_start:.2f}s, '
-                         f'\tStep: {global_step}, \t{latest_eval_result}')
-            eval_results.append((global_step, latest_eval_result))
-
-            logging_start_time = get_time()
-
-            if log_dir is not None and RANK == 0:
-              metrics_logger.append_scalar_metrics(
-                  latest_eval_result,
-                  global_step=global_step,
-                  preemption_count=preemption_count,
-                  is_eval=True,
-              )
-              if save_checkpoints and FLAGS.save_ckpt_freq is None:  # (nico): save ckpt when eval'ing
-                checkpoint_utils.save_checkpoint(
-                    framework=FLAGS.framework,
-                    optimizer_state=optimizer_state,
-                    model_params=model_params,
-                    model_state=model_state,
-                    train_state=train_state,
-                    eval_results=eval_results,
-                    global_step=global_step,
-                    preemption_count=preemption_count,
-                    checkpoint_dir=log_dir,
-                    save_intermediate_checkpoints=FLAGS
-                    .save_intermediate_checkpoints)
-
-            logging_end_time = get_time()
-            train_state['accumulated_logging_time'] += (
-                logging_end_time - logging_start_time)
-
+        except RuntimeError as e:
+          logging.exception(f'Eval step {global_step} error.\n')
+          if 'out of memory' in str(e):
+            logging.warning(
+                'Error: GPU out of memory during eval during step '
+                f'{global_step}, error : {str(e)}.')
             _reset_cuda_mem()
-
-          except RuntimeError as e:
-            logging.exception(f'Eval step {global_step} error.\n')
-            if 'out of memory' in str(e):
-              logging.warning(
-                  'Error: GPU out of memory during eval during step '
-                  f'{global_step}, error : {str(e)}.')
-              _reset_cuda_mem()
-
-    # (nico): save ckpt decoupled from eval  
-    if log_dir is not None and RANK == 0 and \
-        save_checkpoints and FLAGS.save_ckpt_freq is not None and \
-        global_step % FLAGS.save_ckpt_freq == 0:
-      checkpoint_utils.save_checkpoint(
-          framework=FLAGS.framework,
-          optimizer_state=optimizer_state,
-          model_params=model_params,
-          model_state=model_state,
-          train_state=train_state,
-          eval_results=eval_results,
-          global_step=global_step,
-          preemption_count=preemption_count,
-          checkpoint_dir=log_dir,
-          save_intermediate_checkpoints=FLAGS
-          .save_intermediate_checkpoints)
-
-    if wandb.run is not None:
-      wandb.log({
-        'global_step': global_step,
-        'last_update_time': last_update_time,
-        'last_prep_time': last_prep_time,
-      })
-    train_state['last_step_end_time'] = get_time()
 
   metrics = {'eval_results': eval_results, 'global_step': global_step}
 
@@ -662,18 +513,6 @@ def train_once(
         global_step=global_step,
         preemption_count=preemption_count)
     metrics_logger.finish()
-    if save_checkpoints:
-      checkpoint_utils.save_checkpoint(
-          framework=FLAGS.framework,
-          optimizer_state=optimizer_state,
-          model_params=model_params,
-          model_state=model_state,
-          train_state=train_state,
-          eval_results=eval_results,
-          global_step=global_step,
-          preemption_count=preemption_count,
-          checkpoint_dir=log_dir,
-          save_intermediate_checkpoints=FLAGS.save_intermediate_checkpoints)
 
   return train_state['accumulated_submission_time'], metrics
 
@@ -691,7 +530,7 @@ def score_submission_on_workload(workload: spec.Workload,
                                  num_tuning_trials: Optional[int] = None,
                                  trial_index: Optional[int] = None,
                                  log_dir: Optional[str] = None,
-                                 resume_dir: Optional[str] = None,  # (nico)
+                                 baseline_ckpt_dir: Optional[str] = None,  # (nico)
                                  save_checkpoints: Optional[bool] = True,
                                  hparam_start_index: Optional[bool] = None,
                                  hparam_end_index: Optional[bool] = None,
@@ -707,30 +546,10 @@ def score_submission_on_workload(workload: spec.Workload,
 
   init_optimizer_state = submission_module.init_optimizer_state
   update_params = submission_module.update_params
-  data_selection = submission_module.data_selection
   prepare_for_eval = getattr(submission_module, 'prepare_for_eval', None)
-  try:
-    global_batch_size = submission_module.get_batch_size(workload_name)
-  except ValueError:
-    base_workload_name = workloads.get_base_workload_name(workload_name)
-    global_batch_size = submission_module.get_batch_size(base_workload_name)
-  # n_gpus has to be set here, because we cannot call the first Jax operation
-  # before pytorch_init().
-  n_gpus = max(N_GPUS, jax.local_device_count())
-  if global_batch_size % n_gpus != 0:
-    raise ValueError(
-        f'The global batch size ({global_batch_size}) has to be divisible by '
-        f'the number of GPUs ({n_gpus}).')
-  if hasattr(submission_module, 'get_eval_batch_size'):
-    # If the user specifies the eval batch size, use the provided one.
-    global_eval_batch_size = submission_module.get_eval_batch_size(
-        workload_name)
-  else:
-    global_eval_batch_size = workload.eval_batch_size
-  if global_eval_batch_size % n_gpus != 0:
-    raise ValueError(
-        f'The global eval batch size ({global_eval_batch_size}) has to be '
-        f'divisible by the number of GPUs ({n_gpus}).')
+
+  global_batch_size = None
+  global_eval_batch_size = workload.eval_batch_size
 
   if tuning_ruleset == 'external':
     # If the submission runner is responsible for hyperparameter tuning, load in
@@ -740,7 +559,7 @@ def score_submission_on_workload(workload: spec.Workload,
       raise ValueError(
           'Must provide a tuning search space JSON file when using external '
           'tuning.')
-    
+
     # (nico) halton.generate_search always produce the same list, but order may vary
     with open(tuning_search_space, 'r', encoding='UTF-8') as search_space_file:
       if not FLAGS.fixed_space:
@@ -751,18 +570,18 @@ def score_submission_on_workload(workload: spec.Workload,
         # (nico) my code for generating trials TODO: check before submission
         tuning_search_space = fixed_space.generate_search(
             json.load(search_space_file), num_tuning_trials)
-    
+
     tuning_search_space.sort()
-    
+
     all_timings = []  # (nico)
     all_metrics = []  # (nico)
     tuning_search_space_iter = itertools.islice(
         enumerate(tuning_search_space), hparam_start_index, hparam_end_index)
     for hi, hyperparameters in tuning_search_space_iter:
-      
+
       if trial_index is not None and (hi + 1) != trial_index:
         continue
-      
+
       # Generate a new seed from hardware sources of randomness for each trial.
       if not rng_seed:
         rng_seed = struct.unpack('I', os.urandom(4))[0]
@@ -783,11 +602,6 @@ def score_submission_on_workload(workload: spec.Workload,
         logging.info(f'Creating tuning directory at {tuning_dir_name}.')
         logger_utils.makedir(tuning_dir_name)
 
-        # (nico): in case we are resuming from the same exp, 
-        # we also resume from the same trial (original resume logic)
-        if resume_dir == log_dir:
-          resume_dir = tuning_dir_name  # add 'trial_{hi + 1}'
-
         # If existing hyperparameter exists, use saved
         # hyperparameters for consistency.
         hyperparameters = logger_utils.write_hparams(hyperparameters,
@@ -800,7 +614,7 @@ def score_submission_on_workload(workload: spec.Workload,
                                      global_eval_batch_size,
                                      data_dir, imagenet_v2_data_dir,
                                      init_optimizer_state,
-                                     update_params, data_selection,
+                                     update_params, None,
                                      prepare_for_eval,
                                      hyperparameters,
                                      rng_seed,
@@ -809,49 +623,22 @@ def score_submission_on_workload(workload: spec.Workload,
                                      max_global_steps,
                                      max_pct_of_global_steps,  # (nico)
                                      tuning_dir_name,
-                                     resume_dir,  # (nico)
+                                     baseline_ckpt_dir,  # (nico)
                                      save_checkpoints=save_checkpoints,)
       # (nico): modified
       all_timings.append(timing)
       all_metrics.append(metrics)
-      # # (nico): original
-      # all_timings[hi] = timing
-      # all_metrics[hi] = metrics
       
       logging.info(f'Tuning trial {hi + 1}/{num_tuning_trials}')
       logging.info(f'Hyperparameters: {tuning_search_space[hi]}')
-      # (nico): modified
       logging.info(f'Metrics: {metrics}')
       logging.info(f'Timing: {timing}')
       num_evals = len(metrics['eval_results'])
-      # # (nico): original
-      # logging.info(f'Metrics: {all_metrics[hi]}')
-      # logging.info(f'Timing: {all_timings[hi]}')
-      # num_evals = len(all_metrics[hi]['eval_results'])
       logging.info(f'Total number of evals: {num_evals}')
       logging.info('=' * 20)
     score = min(all_timings)
   else:
-    if tuning_search_space is not None:
-      raise ValueError(
-          'Cannot provide a tuning search space when using self tuning.')
-    if not rng_seed:
-      rng_seed = struct.unpack('q', os.urandom(8))[0]
-    rng = prng.PRNGKey(rng_seed)
-    # If the submission is responsible for tuning itself, we only need to run it
-    # once and return the total time.
-    if log_dir is not None:
-      log_dir = os.path.join(log_dir, 'trial_1')
-      logging.info(f'Creating directory at {log_dir}.')
-      logger_utils.makedir(log_dir)
-    with profiler.profile('Train'):
-      score, _ = train_once(
-          workload, workload_name, global_batch_size, global_eval_batch_size,
-          data_dir, imagenet_v2_data_dir,
-          init_optimizer_state, update_params, data_selection,
-          None, rng_seed, rng, profiler, max_global_steps, log_dir,
-          resume_dir,  # (nico)
-          save_checkpoints=save_checkpoints)
+    raise ValueError('self tuning not supported')
   return score
 
 
@@ -912,15 +699,14 @@ def main(_):
   experiment_name = FLAGS.experiment_name
   if experiment_name and FLAGS.append_timestamp:
     experiment_name += datetime.datetime.now().strftime('-%Y-%m-%d-%H-%M-%S')
-  logging_dir_path, resume_dir_path = logger_utils.get_log_dir(
+  logging_dir_path, _ = logger_utils.get_log_dir(
     FLAGS.experiment_dir,
     FLAGS.workload,
     FLAGS.framework,
     experiment_name,
     FLAGS.resume_last_run,
-    FLAGS.resume_experiment_name,
-    FLAGS.overwrite)
-  
+    resume_experiment_name=None,  # (nico)
+    overwrite=FLAGS.overwrite)
 
   score = score_submission_on_workload(
       workload=workload,
@@ -936,7 +722,7 @@ def main(_):
       num_tuning_trials=FLAGS.num_tuning_trials,
       trial_index=FLAGS.trial_index,
       log_dir=logging_dir_path,
-      resume_dir=resume_dir_path,  # (nico)
+      baseline_ckpt_dir=FLAGS.baseline_ckpt_dir,  # (nico)
       save_checkpoints=FLAGS.save_checkpoints,
       hparam_start_index=FLAGS.hparam_start_index,
       hparam_end_index=FLAGS.hparam_end_index,
@@ -957,4 +743,6 @@ if __name__ == '__main__':
   flags.mark_flag_as_required('submission_path')
   flags.mark_flag_as_required('experiment_dir')
   flags.mark_flag_as_required('experiment_name')
+  flags.mark_flag_as_required('baseline_ckpt_dir')
+  flags.mark_flag_as_required('eval_every_n_steps')
   app.run(main)

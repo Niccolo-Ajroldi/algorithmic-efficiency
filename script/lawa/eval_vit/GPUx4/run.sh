@@ -102,7 +102,7 @@ OMP_NUM_THREADS=1 torchrun \
   --standalone \
   --nnodes=1 \
   --nproc_per_node=4 \
-  $CODE_DIR/eval_ckpt.py \
+  $CODE_DIR/eval_vit.py \
   --workload=$workload \
   --framework=$framework \
   --tuning_ruleset=external \

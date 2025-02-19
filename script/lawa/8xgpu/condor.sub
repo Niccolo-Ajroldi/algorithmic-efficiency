@@ -2,7 +2,7 @@
 LOGS_DIR=/fast/najroldi/logs/algoperf
 EXE=/home/najroldi/algorithmic-efficiency/script/lawa/8xgpu/auto_run.sh
 
-workload=wmt
+workload=imagenet_vit
 framework=pytorch
 
 # ## NadamW
@@ -16,16 +16,16 @@ framework=pytorch
 # run_until_the_end=0
 # num_jobs=$(num_tuning_trials)
 
-# ## LAWA
-# submission=submissions/lawa_ema/lawa_ema_no_decay.py
-# search_space=script/lawa/ema/lawa_trial_5_tune_07.json
-# num_tuning_trials=25
-# study=1
-# name=lawa_ema_no_decay_01
-# rng_seed=$(study)
-# allow_tf_32=1
-# run_until_the_end=1
-# num_jobs=$(num_tuning_trials)
+## LAWA
+submission=submissions/lawa_queue/lawa_queue.py
+search_space=script/lawa/queue/lawa_trial_2_best.json
+num_tuning_trials=1
+study=3
+name=lawa_best_8xV100_04
+rng_seed=$(study)
+allow_tf_32=0
+run_until_the_end=1
+num_jobs=$(num_tuning_trials)
 
 # ## SHAMPOO
 # submission=submissions/AlgoPerf_Team_21/external_tuning/shampoo_submission/submission.py
@@ -38,16 +38,16 @@ framework=pytorch
 # run_until_the_end=0
 # num_jobs=$(num_tuning_trials)
 
-## SHAMPOO + LAWA
-submission=submissions/AlgoPerf_Team_21/external_tuning/shampoo_submission/submission_LAWA.py
-search_space=script/lawa/shampoo/trial_4_lawa.json
-num_tuning_trials=1
-study=3
-name=shampoo_lawa_01
-rng_seed=$(study)
-allow_tf_32=0
-run_until_the_end=0
-num_jobs=$(num_tuning_trials)
+# ## SHAMPOO + LAWA
+# submission=submissions/AlgoPerf_Team_21/external_tuning/shampoo_submission/submission_LAWA.py
+# search_space=script/lawa/shampoo/trial_4_lawa.json
+# num_tuning_trials=1
+# study=3
+# name=shampoo_lawa_01
+# rng_seed=$(study)
+# allow_tf_32=0
+# run_until_the_end=0
+# num_jobs=$(num_tuning_trials)
 
 # Args
 executable = $(EXE)
@@ -71,8 +71,8 @@ output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
 log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 
 # Specs
-request_memory = 700000
-request_cpus = 28
+request_memory = 500000
+request_cpus = 16
 request_gpus = 8
 requirements = (TARGET.CUDADeviceName == "Tesla V100-SXM2-32GB")
 # requirements = TARGET.CUDACapability >= 8.0

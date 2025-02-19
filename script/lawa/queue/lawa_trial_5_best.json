@@ -21,12 +21,12 @@
     "feasible_points": [0.02]
   },
   "lawa_burnin_pct": {
-    "feasible_points": [0.1]
+    "feasible_points": [0.25]
   },
   "lawa_every_pct": {
     "feasible_points": [0.002]
   },
   "lawa_queue_len": {
-    "feasible_points": [5]
+    "feasible_points": [10]
   }
 }

@@ -51,6 +51,14 @@ BASE_WORKLOADS_DIR = 'algorithmic_efficiency/workloads/'
 # with open("held_out_workloads_algoperf_v05.json", "r") as f:
 #   HELDOUT_WORKLOADS = json.load(f)
 HELDOUT_WORKLOADS=[]
+# HELDOUT_WORKLOADS = [
+#   "criteo1tb_embed_init_pytorch",
+#   "fastmri_tanh_pytorch",
+#   "imagenet_resnet_large_bn_init_pytorch",
+#   "librispeech_conformer_layernorm_pytorch",
+#   "ogbg_model_size_pytorch",
+#   "wmt_glu_tanh_pytorch",
+# ]
 # These global variables have to be set according to the current set of
 # workloads and rules for the scoring to be correct.
 # We do not use the workload registry since it contains test and development
@@ -60,6 +68,13 @@ NUM_VARIANT_WORKLOADS = 6
 NUM_TRIALS = 5
 NUM_STUDIES = 5
 
+"""
+rm -rf study_0/wmt_post_ln_jax/; \
+rm -rf study_1/wmt_post_ln_jax/; \
+rm -rf study_2/wmt_post_ln_jax/; \
+rm -rf study_3/wmt_post_ln_jax/; \
+rm -rf study_4/wmt_post_ln_jax
+"""
 MIN_EVAL_METRICS = [
     'ce_loss',
     'error_rate',
@@ -275,7 +290,8 @@ def compute_performance_profiles(submissions,
                                  scale='linear',
                                  verbosity=0,
                                  strict=False,
-                                 self_tuning_ruleset=False):
+                                 self_tuning_ruleset=False,
+                                 output_dir=None):
   """Compute performance profiles for a set of submission by some time column.
 
   Args:
@@ -321,6 +337,9 @@ def compute_performance_profiles(submissions,
   df = df[BASE_WORKLOADS + HELDOUT_WORKLOADS]
   # Sort workloads alphabetically (for better display)
   df = df.reindex(sorted(df.columns), axis=1)
+
+  # Save time to target dataframe
+  df.to_csv(os.path.join(output_dir, 'time_to_targets.csv'))
 
   # For each held-out workload set to inf if the base workload is inf or nan
   for workload in df.keys():

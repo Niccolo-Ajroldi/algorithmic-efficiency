@@ -93,7 +93,7 @@ fi
 # max_pct_of_global_steps
 max_pct_of_global_steps=1.0
 if [ "$target_setting" == "1" ]; then
-  max_pct_of_global_steps=0.75
+  max_pct_of_global_steps=0.2
 fi
 
 # Execute python script

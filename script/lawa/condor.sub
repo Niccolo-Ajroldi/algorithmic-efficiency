@@ -5,29 +5,34 @@ EXE=/home/najroldi/algorithmic-efficiency/script/lawa/auto_run.sh
 workload=wmt
 framework=pytorch
 
-## NadamW
-submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
-search_space=script/lawa/nadam/nadamw_trial_5_lr_sweep_02.json
-num_tuning_trials=2
-study=2
-name=lr_sweep_nadamw_02
-rng_seed=$(study)
-allow_tf_32=1
-run_until_the_end=1
-target_setting=0
-num_jobs=$(num_tuning_trials)
-
-# ## LAWA
-# submission=submissions/lawa_ema/lawa_ema_no_decay.py
-# search_space=script/lawa/ema/lawa_trial_2_tune_03.json
-# num_tuning_trials=6
-# study=1
-# name=pg_ema_no_decay_01
+# ## NadamW
+# submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
+# search_space=script/lawa/nadam/nadamw_trial_3_sweep_lr_02.json
+# num_tuning_trials=1
+# study=3
+# name=lr_sweep_nadamw_11
 # rng_seed=$(study)
 # allow_tf_32=1
 # run_until_the_end=1
 # target_setting=0
 # num_jobs=$(num_tuning_trials)
+
+## LAWA
+submission=prize_qualification_baselines/external_tuning/pytorch_nadamw_full_budget.py
+name=overhead_nadamw_01
+# submission=submissions/lawa_ema/lawa_ema.py
+# name=overhead_ema_01
+# submission=submissions/lawa_ema/lawa_ema_nonblocking_jit.py
+# name=overhead_ema_nonblockingjit_01
+
+search_space=script/lawa/ema/lawa_timed.json
+num_tuning_trials=1
+study=1
+rng_seed=$(study)
+allow_tf_32=1
+run_until_the_end=0
+target_setting=1
+num_jobs=$(num_tuning_trials)
 
 # Args
 executable = $(EXE)
@@ -55,8 +60,9 @@ log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 request_memory = 300000
 request_cpus = 16
 request_gpus = 4
-requirements = TARGET.CUDACapability == 8.0 && (TARGET.Machine != "g125.internal.cluster.is.localnet") && (TARGET.Machine != "g147.internal.cluster.is.localnet") && (TARGET.Machine != "g190.internal.cluster.is.localnet")
+requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-40GB")
 
+# requirements = TARGET.CUDACapability >= 8.0 && (TARGET.Machine != "g125.internal.cluster.is.localnet") && (TARGET.Machine != "g147.internal.cluster.is.localnet") && (TARGET.Machine != "g190.internal.cluster.is.localnet")
 # requirements = TARGET.CUDACapability >= 8.0
 # requirements = TARGET.CUDACapability >= 8.0 && (TARGET.Machine != "g147.internal.cluster.is.localnet")
 # requirements = (TARGET.CUDACapability >= 8.0) && (TARGET.Machine != "g100.internal.cluster.is.localnet") && (TARGET.Machine != "g143.internal.cluster.is.localnet")

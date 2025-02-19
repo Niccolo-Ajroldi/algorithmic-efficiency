@@ -98,11 +98,11 @@ fi
 
 # Execute python script
 OMP_NUM_THREADS=1 torchrun \
-  --redirects 1:0,2:0,3:0 \
+  --redirects 1:0 \
   --standalone \
   --nnodes=1 \
-  --nproc_per_node=4 \
-  $CODE_DIR/eval_ckpt.py \
+  --nproc_per_node=2 \
+  $CODE_DIR/eval_vit.py \
   --workload=$workload \
   --framework=$framework \
   --tuning_ruleset=external \

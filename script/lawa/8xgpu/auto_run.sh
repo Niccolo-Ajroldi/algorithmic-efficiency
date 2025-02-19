@@ -8,7 +8,10 @@ export HOME=/home/najroldi
 export CODE_DIR=/home/najroldi/algorithmic-efficiency
 export EXP_DIR=/fast/najroldi/exp/algoperf
 export DATA_DIR=/fast/najroldi/data
-export TMPDIR=/fast/najroldi/tmp
+# export TMPDIR=/fast/najroldi/tmp
+
+export HTTP_PROXY=$http_proxy
+export HTTPS_PROXY=$https_proxy
 
 # export CUDA_LAUNCH_BLOCKING=1
 # export TORCH_USE_CUDA_DSA=1
@@ -96,7 +99,7 @@ if [ "$run_until_the_end" == "1" ]; then
 fi
 
 # Execute python script
-torchrun \
+OMP_NUM_THREADS=1 torchrun \
   --redirects 1:0,2:0,3:0,4:0,5:0,6:0,7:0 \
   --nnodes=1 \
   --nproc_per_node=8 \

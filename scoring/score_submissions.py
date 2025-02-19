@@ -10,6 +10,34 @@ python3 score_submissions.py \
   --submission_directory $HOME/algorithmic-efficiency/prize_qualification_baselines/logs \
   --strict True
   --compute_performance_profiles
+
+
+python scoring/score_submissions.py \
+  --strict=False \
+  --compute_performance_profiles \
+  --output_dir=/home/najroldi/algorithmic-efficiency/scoring_results/manual_scores \
+  --load_results_from_filename=results.pkl
+
+python scoring/score_submissions.py \
+  --strict=False \
+  --compute_performance_profiles \
+  --output_dir=/home/najroldi/algorithmic-efficiency/scoring_results/lawa_vs_nadam_steps \
+  --load_results_from_filename=results.pkl
+
+
+python scoring/score_submissions.py \
+  --submission_directory=/home/najroldi/algorithms_results_v0.5/logs/algoperf_scoring_v05/external_tuning \
+  --strict=False \
+  --compute_performance_profiles \
+  --output_dir=/home/najroldi/algorithmic-efficiency/scoring_results/all
+
+
+python scoring/score_submissions.py \
+  --submission_directory=/fast/najroldi/exp/algoperf/scores_nadam \
+  --strict=False \
+  --compute_performance_profiles \
+  --output_dir=/home/najroldi/algorithmic-efficiency/scoring_results/baseline
+
 """
 
 import operator
@@ -183,7 +211,7 @@ def main(_):
                                        submission)
         df = scoring_utils.get_experiment_df(experiment_path)
         results[submission] = df
-        summary_df = get_submission_summary(df)
+        summary_df = get_submission_summary(df, include_test_split=False)
         with open(
             os.path.join(FLAGS.output_dir, f'{submission}_summary.csv'),
             'w') as fout:
@@ -206,7 +234,8 @@ def main(_):
   if FLAGS.compute_performance_profiles:
     performance_profile_df = performance_profile.compute_performance_profiles(
         results,
-        time_col='score',
+        # time_col='score',
+        time_col='global_step',
         min_tau=1.0,
         max_tau=4.0,
         reference_submission_tag=None,
@@ -214,11 +243,15 @@ def main(_):
         scale='linear',
         verbosity=0,
         self_tuning_ruleset=FLAGS.self_tuning_ruleset,
-        strict=FLAGS.strict)
+        strict=FLAGS.strict,
+        output_dir=FLAGS.output_dir)
     if not os.path.exists(FLAGS.output_dir):
       os.mkdir(FLAGS.output_dir)
     performance_profile.plot_performance_profiles(
-        performance_profile_df, 'score', save_dir=FLAGS.output_dir)
+        performance_profile_df, 
+        # 'score', 
+        'global_step', 
+        save_dir=FLAGS.output_dir)
     performance_profile_str = tabulate(
         performance_profile_df.T, headers='keys', tablefmt='psql')
     logging.info(f'Performance profile:\n {performance_profile_str}')
