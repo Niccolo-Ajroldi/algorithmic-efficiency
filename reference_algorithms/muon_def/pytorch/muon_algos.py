@@ -65,7 +65,7 @@ def muon_update(g, m, beta, nesterov, ns_steps, ns_eps):
   m.mul_(beta).add_(g, alpha=1 - beta)
 
   if nesterov:
-    g = g.add(m, alpha=beta)
+    g = g.mul(1-beta).add(m, alpha=beta)
   else:
     g = m
 
