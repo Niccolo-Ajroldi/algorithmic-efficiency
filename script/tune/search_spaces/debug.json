@@ -1,0 +1,17 @@
+[
+  {
+    "learning_rate": 1e-05,
+    "weight_decay": 0.0,
+    "muon_beta": 0.8,
+    "muon_adjust_lr": null,
+    "muon_nesterov": true,
+    "muon_ns_steps": 5,
+    "muon_ns_eps": 1e-07,
+    "adamw_beta1": 0.9,
+    "adamw_beta2": 0.999,
+    "adamw_eps": 1e-08,
+    "dropout_rate": 0.0,
+    "label_smoothing": 0.0,
+    "warmup_factor": 0.05
+  }
+]
