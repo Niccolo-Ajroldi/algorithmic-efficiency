@@ -9,12 +9,12 @@ from algoperf import halton
 
 
 OUT_PATH = 'script/tune/search_spaces'
-OUT_NAME = 'sweep_01.json'
-
+OUT_NAME = 'sweep_02.json'
+OVERRIDE = False
 
 sweep_dict = {
     "learning_rate": [
-        1e-5, 1e-4, 1e-3, 1e-2,
+        1e-5, 1e-4, 1e-3,
         # 1e-5, 5e-5, 2.5e-4, 1.25e-3, 6.25e-3, #3.125e-2, # log5
         # 1e-5, 4e-5, 1.6e-4, 6.4e-4, 2.56e-3, 1.024e-2, # log4
     ],
@@ -22,7 +22,7 @@ sweep_dict = {
 
     # Muon
     "muon_beta": [0.8, 0.9],
-    "muon_adjust_lr": [None, 'spectral_norm', 'match_adam'],
+    "muon_adjust_lr": 'spectral_norm', # [None, 'spectral_norm', 'match_adam'],
     "muon_nesterov": True,
     "muon_ns_steps": 5,
     "muon_ns_eps": 1e-7,
@@ -32,7 +32,7 @@ sweep_dict = {
     "adamw_beta2": 0.999,
     "adamw_eps": 1e-8,
 
-    "dropout_rate": 0.0,
+    "dropout_rate": [0.0, 0.1],
     "label_smoothing": [0.0, 0.1],
     "warmup_factor": 0.05
 }
@@ -49,7 +49,7 @@ print(f"Cartesian product results in {len(grid)} HP points.")
 
 path = Path(OUT_PATH) / OUT_NAME
 
-if path.exists():
+if path.exists() and not OVERRIDE:
     raise FileExistsError('Found esisting path.')
 with path.open("w") as f:
     json.dump(grid, f, indent=2)

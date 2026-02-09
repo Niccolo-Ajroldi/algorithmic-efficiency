@@ -446,11 +446,14 @@ def train_once(
 
       # Check if time is remaining,
       # use 1.5x the runtime budget for the self-tuning ruleset.
-      max_allowed_runtime_sec = (
-        workload.max_allowed_runtime_sec
-        if FLAGS.tuning_ruleset == 'external'
-        else 1.5 * workload.max_allowed_runtime_sec
-      )
+      # max_allowed_runtime_sec = (
+      #   workload.max_allowed_runtime_sec
+      #   if FLAGS.tuning_ruleset == 'external'
+      #   else 1.5 * workload.max_allowed_runtime_sec
+      # )
+      ## (nico): we fake a self-tuning ruleset,
+      # in order to "tune" the submission using search spaces
+      max_allowed_runtime_sec = 1.5 * workload.max_allowed_runtime_sec
       train_state['is_time_remaining'] = (
         train_state['accumulated_submission_time'] < max_allowed_runtime_sec
       )

@@ -6,12 +6,17 @@ The first one expects all-reduced gradients, and replicates the parameter update
 The second one reduce-scatters the gradients internally, and distributed the parameter update across gpus.
 
 Notice that ``MuonDataParallel`` cannot be used with standard gradient clipping.
+
+The current implementation flattens trailing dimension for any parameter with more than 2 dimensions.
+While this is correct for 4D matrices, it might be problematic for some batched 3D parameters.
+The current implementation is correct for AlgoPerf v07.0 workloads, but might require adjustments in future.
 """
 
 import os
 import torch
 import torch.distributed as dist
 from abc import ABC, abstractmethod
+import logging
 
 
 # Distributed settings
@@ -46,7 +51,7 @@ def zeropower_via_newtonschulz5(G, steps=NS_STEPS, eps=NS_EPS):
 
   # Ensure spectral norm is at most 1.
   # Ortho(cX)=Ortho(X), so we can normalize by ||X||_2 <= ||X||_F
-  X /= X.norm() + eps
+  X /= (X.norm() + eps)
 
   # NS iterations
   for _ in range(steps):
@@ -69,9 +74,11 @@ def muon_update(g, m, beta, nesterov, ns_steps, ns_eps):
   else:
     g = m
 
-  g = g.reshape(g.size(0), -1)  # flatten trailing dims on 3D, 4D params
+  if g.ndim == 4:
+    g = g.reshape(g.size(0), -1)  # flatten trailing dims on 4D params
   g = zeropower_via_newtonschulz5(g, steps=ns_steps, eps=ns_eps)
-  g = g.view(m.shape)  # restore original shape
+  if m.ndim == 4:
+    g = g.view(m.shape)  # restore original shape
 
   return g
   
@@ -364,6 +371,9 @@ def split_params_muon_adam(model):
     else:
       adam_params.append(p)
       adam_infos.append(f'{n} (ndim={p.ndim})')
+
+  # logging.info("Muon params:\n\t" + "\n\t".join(muon_infos))
+  # logging.info("Adam params:\n\t" + "\n\t".join(adam_infos))
   
   return muon_params, adam_params
 

@@ -11,9 +11,7 @@ which python
 echo "Activating virtual environment..."
 source /home/najroldi/algorithmic-efficiency/.venv/bin/activate
 
-module load cuda/12.1 # this will set $CUDA_HOME
-export XLA_FLAGS="--xla_gpu_cuda_data_dir=$CUDA_HOME"
-ls "$CUDA_HOME/nvvm/libdevice" | head
+module load cuda/12.9
 
 # Env vars
 # export OMP_NUM_THREADS=2 # TODO: check
@@ -21,6 +19,10 @@ export HOME=/home/najroldi
 export CODE_DIR=/home/najroldi/algorithmic-efficiency
 export EXP_DIR=/fast/najroldi/exp/algoperf
 export DATA_DIR=/fast/najroldi/data
+
+# Framework and tuning ruleset
+framework=pytorch
+tuning_ruleset=external
 
 # Job specific vars
 process=$1
@@ -75,8 +77,8 @@ torchrun \
     --nproc_per_node=$n_gpus \
     $CODE_DIR/submission_runner.py \
     --workload=$workload \
-    --framework=pytorch \
-    --tuning_ruleset=self \
+    --framework=$framework \
+    --tuning_ruleset=$tuning_ruleset \
     --data_dir=$DATA_DIR/$dataset \
     --imagenet_v2_data_dir=$DATA_DIR/$dataset \
     --librispeech_tokenizer_vocab_path=$tokenizer_path \

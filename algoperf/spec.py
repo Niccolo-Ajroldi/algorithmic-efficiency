@@ -330,18 +330,20 @@ class Workload(metaclass=abc.ABCMeta):
     global_step: int,
   ) -> Dict[str, float]:
     """Run a full evaluation of the model."""
-    logging.info('Evaluating on the training split.')
-    train_metrics = self._eval_model_on_split(
-      split='eval_train',
-      num_examples=self.num_eval_train_examples,
-      global_batch_size=global_batch_size,
-      params=params,
-      model_state=model_state,
-      rng=rng,
-      data_dir=data_dir,
-      global_step=global_step,
-    )
-    eval_metrics = {'train/' + k: v for k, v in train_metrics.items()}
+    # (nico): skip eval on train
+    # logging.info('Evaluating on the training split.')
+    # train_metrics = self._eval_model_on_split(
+    #   split='eval_train',
+    #   num_examples=self.num_eval_train_examples,
+    #   global_batch_size=global_batch_size,
+    #   params=params,
+    #   model_state=model_state,
+    #   rng=rng,
+    #   data_dir=data_dir,
+    #   global_step=global_step,
+    # )
+    # eval_metrics = {'train/' + k: v for k, v in train_metrics.items()}
+    eval_metrics = {}
     # We always require a validation set.
     logging.info('Evaluating on the validation split.')
     validation_metrics = self._eval_model_on_split(
@@ -357,6 +359,7 @@ class Workload(metaclass=abc.ABCMeta):
     for k, v in validation_metrics.items():
       eval_metrics['validation/' + k] = v
     eval_metrics['validation/num_examples'] = self.num_validation_examples
+    # (nico): skip eval on test
     # Evaluate on the test set. TODO(znado): always eval on the test set.
     # try:
     #   if self.num_test_examples is not None:
