@@ -1,0 +1,49 @@
+# Define variables
+LOGS_DIR=/fast/najroldi/logs/algoperf
+EXE=/home/najroldi/algorithmic-efficiency/script/sweep_workloads/run.sh
+
+# Args
+submission=reference_algorithms/muon/pytorch/adamw.py
+search_space=reference_algorithms/muon/speed_test_kj_NS_async.json
+num_tuning_trials=1
+study=4
+name=full_node_5pct_muon_kj_NS_async
+eval_every_n_steps=9000000
+rng_seed=4
+allow_tf32=True
+deterministic=False
+torch_compile=True
+max_pct_of_global_steps=0.05
+
+# workload=imagenet_vit
+
+# Args
+executable = $(EXE)
+arguments = \
+  $(Process) \
+  $(submission) \
+  $(search_space) \
+  $(num_tuning_trials) \
+  $(study) \
+  $(name) \
+  $(eval_every_n_steps) \
+  $(rng_seed) \
+  $(allow_tf32) \
+  $(deterministic) \
+  $(torch_compile) \
+  $(max_pct_of_global_steps)
+
+# Logs
+error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
+output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
+log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
+
+# Specs
+request_memory = 500000
+request_cpus = 32
+request_gpus = 8
+requirements =  (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB")
+# requirements = (TARGET.CUDACapability >= 8.0) && (TARGET.CUDADeviceName != "NVIDIA A100-SXM4-40GB")
+max_materialize = 8
+
+queue 8

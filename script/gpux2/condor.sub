@@ -1,0 +1,72 @@
+# Define variables
+LOGS_DIR=/fast/najroldi/logs/algoperf
+EXE=/home/najroldi/algorithmic-efficiency/script/gpux2/run.sh
+
+# workload=criteo1tb
+# workload=fastmri
+# workload=imagenet_resnet
+# workload=imagenet_vit
+# workload=librispeech_conformer
+# workload=librispeech_deepspeech
+# workload=ogbg
+workload=wmt
+framework=pytorch
+
+submission=reference_algorithms/muon/pytorch/muon_DP_vanilla.py
+search_space=reference_algorithms/muon/tuning_search_space.json
+
+num_tuning_trials=1
+study=1
+
+name=muon_DP_vanilla_test_02
+
+resume_experiment_name=None
+resume_last_run=False
+
+save_checkpoints=False
+save_intermediate_checkpoints=False
+save_ckpt_freq=256
+eval_every_n_steps=None
+
+rng_seed=$(study)
+allow_tf_32=False
+run_until_the_end=True
+target_setting=False
+
+num_jobs=$(num_tuning_trials)
+
+# Args
+executable = $(EXE)
+arguments = \
+  $(workload) \
+  $(framework) \
+  $(submission) \
+  $(search_space) \
+  $(num_tuning_trials) \
+  $(study) \
+  $(name) \
+  $(resume_experiment_name) \
+  $(resume_last_run) \
+  $(eval_every_n_steps) \
+  $(save_checkpoints) \
+  $(save_intermediate_checkpoints) \
+  $(save_ckpt_freq) \
+  $(rng_seed) \
+  $(allow_tf_32) \
+  $(run_until_the_end) \
+  $(target_setting) \
+  $(Cluster) \
+  $(Process)
+
+# Logs
+error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
+output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
+log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
+
+# Specs
+request_memory = 250000
+request_cpus = 8
+request_gpus = 4
+requirements = (TARGET.CUDACapability >= 8.0) && (TARGET.CUDADeviceName != "NVIDIA A100-SXM4-40GB")
+
+queue $(num_jobs)
