@@ -1,0 +1,142 @@
+{
+  "criteo1tb": {
+    "validation_target_value": 0.129657,
+    "test_target_value": 0.131967
+  },
+  "criteo1tb_test": {
+    "validation_target_value": 0.129657,
+    "test_target_value": 0.131967
+  },
+  "criteo1tb_layernorm": {
+    "validation_target_value": 0.129657,
+    "test_target_value": 0.131967
+  },
+  "criteo1tb_embed_init": {
+    "validation_target_value": 0.129657,
+    "test_target_value": 0.131967
+  },
+  "criteo1tb_resnet": {
+    "validation_target_value": 0.129657,
+    "test_target_value": 0.131967
+  },
+  "fastmri": {
+    "validation_target_value": 0.723284,
+    "test_target_value": 0.739996
+  },
+  "fastmri_model_size": {
+    "validation_target_value": 0.723284,
+    "test_target_value": 0.739996
+  },
+  "fastmri_tanh": {
+    "validation_target_value": 0.723284,
+    "test_target_value": 0.739996
+  },
+  "fastmri_layernorm": {
+    "validation_target_value": 0.723284,
+    "test_target_value": 0.739996
+  },
+  "imagenet_resnet": {
+    "validation_target_value": 0.76526,
+    "test_target_value": 0.6423
+  },
+  "imagenet_resnet_silu": {
+    "validation_target_value": 0.76526,
+    "test_target_value": 0.6423
+  },
+  "imagenet_resnet_gelu": {
+    "validation_target_value": 0.76526,
+    "test_target_value": 0.6423
+  },
+  "imagenet_resnet_large_bn_init": {
+    "validation_target_value": 0.76526,
+    "test_target_value": 0.6423
+  },
+  "imagenet_vit": {
+    "validation_target_value": 0.77113,
+    "test_target_value": 0.6523
+  },
+  "imagenet_vit_glu": {
+    "validation_target_value": 0.77113,
+    "test_target_value": 0.6523
+  },
+  "imagenet_vit_post_ln": {
+    "validation_target_value": 0.77113,
+    "test_target_value": 0.6523
+  },
+  "imagenet_vit_map": {
+    "validation_target_value": 0.77113,
+    "test_target_value": 0.6523
+  },
+  "librispeech_conformer": {
+    "validation_target_value": 0.094114,
+    "test_target_value": 0.056629
+  },
+  "librispeech_conformer_attention_temperature": {
+    "validation_target_value": 0.094114,
+    "test_target_value": 0.056629
+  },
+  "librispeech_conformer_layernorm": {
+    "validation_target_value": 0.094114,
+    "test_target_value": 0.056629
+  },
+  "librispeech_conformer_gelu": {
+    "validation_target_value": 0.094114,
+    "test_target_value": 0.056629
+  },
+  "librispeech_deepspeech": {
+    "validation_target_value": 0.14342,
+    "test_target_value": 0.090976,
+    "max_allowed_runtime_sec": 36949,
+    "eval_period_time_sec": 1447
+  },
+  "librispeech_deepspeech_tanh": {
+    "validation_target_value": 0.14342,
+    "test_target_value": 0.090976,
+    "max_allowed_runtime_sec": 36949,
+    "eval_period_time_sec": 1447
+  },
+  "librispeech_deepspeech_no_resnet": {
+    "validation_target_value": 0.14342,
+    "test_target_value": 0.090976,
+    "max_allowed_runtime_sec": 36949,
+    "eval_period_time_sec": 1447
+  },
+  "librispeech_deepspeech_norm_and_spec_aug": {
+    "validation_target_value": 0.14342,
+    "test_target_value": 0.090976,
+    "max_allowed_runtime_sec": 36949,
+    "eval_period_time_sec": 1447
+  },
+  "ogbg": {
+    "validation_target_value": 0.269446,
+    "test_target_value": 0.253051
+  },
+  "ogbg_gelu": {
+    "validation_target_value": 0.269446,
+    "test_target_value": 0.253051
+  },
+  "ogbg_silu": {
+    "validation_target_value": 0.269446,
+    "test_target_value": 0.253051
+  },
+  "ogbg_model_size": {
+    "validation_target_value": 0.269446,
+    "test_target_value": 0.253051
+  },
+  "wmt": {
+    "validation_target_value": 29.5779,
+    "test_target_value": 29.0515
+  },
+  "wmt_post_ln": {
+    "validation_target_value": 29.5779,
+    "test_target_value": 29.0515
+  },
+  "wmt_attention_temp": {
+    "validation_target_value": 29.5779,
+    "test_target_value": 29.0515
+  },
+  "wmt_glu_tanh": {
+    "validation_target_value": 29.5779,
+    "test_target_value": 29.0515
+  }
+}

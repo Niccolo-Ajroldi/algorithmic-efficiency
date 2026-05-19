@@ -1,0 +1,39 @@
+# Define variables
+LOGS_DIR=/fast/najroldi/logs/algoperf
+EXE=/lustre/home/najroldi/algorithmic-efficiency/script/tune/single_workload/run.sh
+
+# Args
+workload=imagenet_resnet
+submission=reference_algorithms/muon_def/pytorch/adamw_fused.py
+search_space=script/tune/search_spaces/adamw.json
+num_tuning_trials=1
+study=1
+rng_seed=1
+name=adamw_fused_01
+
+# Logs
+error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
+output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
+log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
+
+# Specs
+request_memory = 250000
+request_cpus = 16
+request_gpus = 4
+requirements = TARGET.CUDACapability == 8.0
+# max_materialize = 8
+
+# Arguments to the script.
+executable = $(EXE)
+arguments = \
+  $(Process) \
+  $(workload) \
+  $(submission) \
+  $(search_space) \
+  $(num_tuning_trials) \
+  $(study) \
+  $(name) \
+  $(rng_seed) \
+  $(request_gpus)
+
+queue $(num_tuning_trials)

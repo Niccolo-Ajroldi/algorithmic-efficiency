@@ -24,8 +24,9 @@ def _pytorch_cosine_warmup(step_hint: int, hyperparameters, optimizer):
   warmup = LinearLR(
     optimizer, start_factor=1e-10, end_factor=1.0, total_iters=warmup_steps
   )
-  cosine_steps = max(step_hint - warmup_steps, 1)
-  cosine_decay = CosineAnnealingLR(optimizer, T_max=cosine_steps)
+  total_steps = int(step_hint * getattr(hyperparameters, "step_reduce", 1.0))
+  decay_steps = max(1, total_steps - warmup_steps)
+  cosine_decay = CosineAnnealingLR(optimizer, T_max=decay_steps)
   return SequentialLR(
     optimizer, schedulers=[warmup, cosine_decay], milestones=[warmup_steps]
   )
@@ -96,6 +97,10 @@ def update_params(
   del train_state
   del eval_results
 
+  reduced_steps = int(workload.step_hint * getattr(hyperparameters, "step_reduce", 1.0))
+  if global_step >= reduced_steps:
+      raise RuntimeError(f"Step {global_step} > cosine_end {reduced_steps}")
+    
   current_model = current_param_container
   current_model.train()
   optimizer_state['muon'].zero_grad()
@@ -228,7 +233,7 @@ def get_batch_size(workload_name):
   elif workload_name == 'mnist':
     return 16
   elif workload_name == 'finewebedu_lm':
-    return 32
+    return 64
   else:
     raise ValueError(f'Unsupported workload name: {workload_name}.')
 

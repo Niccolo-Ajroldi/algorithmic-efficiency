@@ -13,8 +13,8 @@ def _split_params_muon_adam(model):
     if not p.requires_grad:
       continue
 
-    # Assign embeddings to Adam (wmt, criteo)
-    if "embedding" in n.lower():
+    # Assign embeddings to Adam (wmt, criteo1tb, finewebedu_lm)
+    if "embedding" in n.lower() or "embed_tokens" in n.lower():
       adam_params.append(p)
       adam_infos.append(f'{n} (ndim={p.ndim})')
     elif p.ndim >= 2:
